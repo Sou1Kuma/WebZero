@@ -1,0 +1,1266 @@
+// ███████╗███████╗██████╗  ██████╗ ████████╗██╗    ██╗ ██████╗ 
+// ╚══███╔╝██╔════╝██╔══██╗██╔═══██╗╚══██╔══╝██║    ██║██╔═══██╗
+//   ███╔╝ █████╗  ██████╔╝██║   ██║   ██║   ██║ █╗ ██║██║   ██║
+//  ███╔╝  ██╔══╝  ██╔══██╗██║   ██║   ██║   ██║███╗██║██║   ██║
+// ███████╗███████╗██║  ██║╚██████╔╝   ██║   ╚███╔███╔╝╚██████╔╝
+// ╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚══╝╚══╝  ╚═════╝ 
+//
+// This project was created for the Minecraft community, thanks to Lisa for creating this website and Bluecoin Community for giving us permissions <3
+
+import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
+import { Routes, Route, Link } from 'react-router-dom';
+import ItemCard from './ItemCard';
+import ReactDOM from 'react-dom';
+
+interface SearchResult {
+  Id: string;
+  Title: { 'en-US': string };
+  DisplayProperties: { creatorName: string };
+  ContentType: string[];
+  Tags: string[];
+  source?: string;
+  Images?: Array<{
+    Id: string;
+    Tag: string;
+    Type: string;
+    Url: string;
+  }>;
+}
+
+interface DownloadItem {
+  id: string;
+  title: string;
+  status: 'pending' | 'downloading' | 'completed' | 'error';
+  progress: number;
+  totalSize: number;
+  downloadedSize: number;
+  speed: number;
+  startTime: number;
+  serverStatus?: string;
+  contentTypes?: string;
+  hasMultipleTypes?: boolean;
+  totalFiles?: string;
+}
+
+interface Notification {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
+// API config
+const API_BASE_URL = "http://localhost:8000";
+
+// Utility functions for download display
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatSpeed = (bytesPerSecond: number): string => {
+  return formatBytes(bytesPerSecond) + '/s';
+};
+
+function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
+  handleDownload: (itemId: string, title: string) => void;
+  downloads: DownloadItem[];
+  renderDownloadsPanel: () => JSX.Element;
+}) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [total, setTotal] = useState(0);
+  const pageSize = 12;
+  const tags = [
+    { label: 'All', value: 'all' },
+    { label: 'Add-Ons', value: 'addon' },
+    { label: 'Worlds', value: 'worlds' },
+    { label: 'Mashups', value: 'mashup' },
+    { label: 'Textures', value: 'texturepack' },
+    { label: 'Skins', value: 'skinpack' },
+  ];
+  const [sort, setSort] = useState<'created' | 'updated'>('created');
+
+  // State for modal
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [modalImages, setModalImages] = useState<Array<{ Tag: string; Url: string }> | null>(null);
+  const [modalVideos, setModalVideos] = useState<Array<{ Tag: string; Url: string }> | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setLoading(true);
+    let url: string;
+    let headers: any = {
+      'Cache-Control': 'no-cache'
+    };
+
+    // ถ้าเลือก tag skinpack ให้ใช้ API หลัก (api.py)
+    if (selectedTag === 'skinpack') {
+      url = `${API_BASE_URL}/api/browse-skinpack?page=${page}&page_size=${pageSize}`;
+      if (debouncedSearch.trim()) {
+        url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
+      }
+      headers['Authorization'] = 'Bearer zerotwo';
+    } else {
+      url = `${API_BASE_URL}/api/browse-local?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&_=${Date.now()}`;
+      if (debouncedSearch.trim()) {
+        url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
+      }
+      headers['Authorization'] = 'Bearer zerotwo';
+    }
+
+    // For /api/browse, add sort param
+    if (selectedTag !== 'skinpack' && selectedTag !== 'all') {
+      url = `${API_BASE_URL}/api/browse?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&sort=${sort}`;
+      if (debouncedSearch.trim()) {
+        url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
+      }
+      headers['Authorization'] = 'Bearer zerotwo';
+    }
+
+    fetch(url, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error('API error: ' + res.status);
+        return res.json();
+      })
+      .then((data) => {
+        const items = data.data || data.items || [];
+        console.log('API items:', items.length, items);
+        // Enrich items with PlayFab images (เฉพาะถ้ายังไม่มี Images)
+        if (items.length > 0 && !items[0].Images) {
+          const itemIds = items.map((item: any) => item.Id || item.id).filter(Boolean);
+          if (itemIds.length > 0) {
+            fetch(`${API_BASE_URL}/api/enrich-images`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer zerotwo'
+              },
+              body: JSON.stringify({ item_ids: itemIds })
+            })
+            .then(res => res.json())
+            .then(imageData => {
+              const enrichedItems = items.map((item: any) => {
+                const itemId = item.Id || item.id;
+                if (imageData[itemId] && imageData[itemId].Images) {
+                  return { ...item, Images: imageData[itemId].Images };
+                }
+                return item;
+              });
+              console.log('Enriched items:', enrichedItems.length, enrichedItems);
+              setItems(enrichedItems);
+            })
+            .catch(err => {
+              setItems(items);
+            });
+          } else {
+            setItems(items);
+          }
+        } else {
+          setItems(items);
+        }
+        setTotal(data.total || data.count || (data.data ? data.data.length : 0));
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        setItems([]);
+        setTotal(0);
+      });
+  }, [selectedTag, page, debouncedSearch, sort]);
+
+  const getThumbnailUrl = (images?: Array<{ Tag: string; Url: string }>) => {
+    if (!images || images.length === 0) return null;
+    const thumb = images.find(img => img.Tag === 'Thumbnail');
+    if (thumb && thumb.Url) return thumb.Url;
+    // fallback: use first image if no 'Thumbnail'
+    return images[0]?.Url || null;
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Fetch all images/videos for modal when selectedItem changes
+  useEffect(() => {
+    if (!selectedItem) {
+      setModalImages(null);
+      setModalVideos(null);
+      setModalLoading(false);
+      setSelectedImage(null);
+      return;
+    }
+    setModalLoading(true);
+    fetch(`${API_BASE_URL}/api/enrich-images`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer zerotwo'
+      },
+      body: JSON.stringify({ item_ids: [selectedItem.Id || selectedItem.id] })
+    })
+      .then(res => res.json())
+      .then(imageData => {
+        const images = imageData[selectedItem.Id || selectedItem.id]?.Images || [];
+        const galleryImages = images.filter((img: any) => img.Tag === 'Thumbnail' || img.Tag === 'screenshot');
+        
+        // Sort images: Thumbnail first, then screenshots
+        const sortedImages = galleryImages.sort((a: any, b: any) => {
+          if (a.Tag === 'Thumbnail' && b.Tag !== 'Thumbnail') return -1;
+          if (a.Tag !== 'Thumbnail' && b.Tag === 'Thumbnail') return 1;
+          return 0;
+        });
+        
+        setModalImages(sortedImages);
+        setModalVideos(images.filter((img: any) => img.Tag.toLowerCase().includes('video') || img.Tag.toLowerCase().includes('trailer')));
+        setSelectedImage(sortedImages[0]?.Url || null);
+        setModalLoading(false);
+      })
+      .catch(() => {
+        setModalImages(null);
+        setModalVideos(null);
+        setSelectedImage(null);
+        setModalLoading(false);
+      });
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (galleryRef.current) {
+      galleryRef.current.scrollLeft = 0;
+    }
+  }, [selectedItem]);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Lock scroll when modal is open
+  useEffect(() => {
+    if (selectedItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedItem]);
+
+  return (
+    <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
+      <h2 style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 32, textAlign: 'center', marginBottom: 24 }}>Browse Marketplace</h2>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <label style={{ color: '#ffd600', fontWeight: 'bold', marginRight: 8 }}>Sort by:</label>
+        <select value={sort} onChange={e => setSort(e.target.value as 'created' | 'updated')} style={{ fontSize: 16, borderRadius: 6, padding: '4px 12px' }}>
+          <option value="created">Latest Created</option>
+          <option value="updated">Latest Updated</option>
+        </select>
+      </div>
+      {/* Drawer button for mobile */}
+      <button
+        className="filter-drawer-btn"
+        onClick={() => setDrawerOpen(true)}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: 24,
+          left: 24,
+          zIndex: 1200,
+          background: '#ffd600',
+          color: '#222',
+          border: 'none',
+          borderRadius: 8,
+          padding: '10px 24px',
+          fontWeight: 'bold',
+          fontSize: 18,
+          boxShadow: '0 2px 8px #0004',
+          cursor: 'pointer',
+        }}
+      >Filter</button>
+      {/* Drawer overlay */}
+      {drawerOpen && (
+        <div className="filter-drawer-overlay" onClick={() => setDrawerOpen(false)}></div>
+      )}
+      {/* Drawer itself */}
+      <div className={`filter-drawer${drawerOpen ? ' open' : ''}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
+          >×</button>
+          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
+          {tags.map((tag) => (
+            <button
+              key={tag.value}
+              className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
+              onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
+              style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="browse-content" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+        {/* Desktop filter (hidden on mobile) */}
+        <div className="filter-sidebar">
+          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {tags.map((tag) => (
+              <button
+                key={tag.value}
+                className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
+                onClick={() => { setSelectedTag(tag.value); setPage(1); }}
+                style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', marginBottom: 18, gap: 12 }}>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search for content..."
+              style={{ width: 320, padding: 8, fontSize: 16, borderRadius: 6, border: '1px solid #888' }}
+            />
+          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', color: '#ffd600', fontSize: 20, marginTop: 40 }}>Loading...</div>
+          ) : (
+            <>
+              {items.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#ffd600', fontSize: 20, marginTop: 40 }}>No items found.</div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: 24,
+                  marginTop: 8
+                }}>
+                  {items.map((item, idx) => {
+                    const downloadItem = downloads.find(d => d.id.startsWith((item.Id || item.id) + '_'));
+                    const isPending = downloadItem?.status === 'pending';
+                    const isDownloading = downloadItem?.status === 'downloading';
+                    return (
+                      <ItemCard
+                        key={item.Id || item.id || idx}
+                        item={item}
+                        index={idx}
+                        onSelect={setSelectedItem}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {/* pagination */}
+              <div className="browse-pagination" style={{ marginTop: 24, textAlign: 'center' }}>
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+                <span style={{ marginLeft: 12, color: '#ffd600', fontWeight: 'bold' }}>Page {page} / {totalPages}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Modal for details */}
+      {selectedItem && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            zIndex: 1000,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            style={{
+              background: '#181818',
+              borderRadius: 16,
+              padding: 24,
+              minWidth: 320,
+              maxWidth: 700,
+              width: '95vw',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 4px 32px #000a',
+              margin: 0,
+              position: 'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedItem(null)}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'none',
+                border: 'none',
+                color: '#ffd600',
+                fontSize: 28,
+                cursor: 'pointer',
+                zIndex: 10
+              }}
+            >×</button>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              {/* Main image (selected) */}
+              <img
+                src={selectedImage || '/placeholder.png'}
+                alt="main"
+                style={{ width: '100%', maxWidth: 600, borderRadius: 10, boxShadow: '0 2px 8px #0004', background: '#111', margin: '0 auto', display: 'block' }}
+                onError={e => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+              />
+            </div>
+            {/* Gallery of screenshots */}
+            {modalLoading ? (
+              <div style={{ color: '#ffd600', textAlign: 'center', marginBottom: 12 }}>Loading images...</div>
+            ) : modalImages && modalImages.length > 1 ? (
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <div
+                  ref={galleryRef}
+                  className="gallery-thumbnails"
+                >
+                  {modalImages.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img.Url}
+                      alt={img.Tag}
+                      style={{
+                        boxShadow: selectedImage === img.Url ? '0 0 0 3px #ffd700' : '0 1px 4px #0006',
+                        background: '#111',
+                        cursor: 'pointer',
+                        border: selectedImage === img.Url ? '2px solid #ffd700' : 'none'
+                      }}
+                      onClick={() => setSelectedImage(img.Url)}
+                      onError={e => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                    />
+                  ))}
+                </div>
+                {/* Navigation buttons */}
+                {modalImages.length > 4 && (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (galleryRef.current) {
+                          galleryRef.current.scrollLeft -= 320;
+                        }
+                      }}
+                      className="gallery-nav-btn prev"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (galleryRef.current) {
+                          galleryRef.current.scrollLeft += 320;
+                        }
+                      }}
+                      className="gallery-nav-btn next"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
+            {/* Video player or button */}
+            {modalVideos && modalVideos.length > 0 && (
+              <div style={{ marginBottom: 12, textAlign: 'center' }}>
+                {modalVideos.map((vid, i) => (
+                  <video key={i} controls style={{ width: '100%', maxWidth: 320, borderRadius: 8, marginBottom: 8 }}>
+                    <source src={vid.Url} />
+                    Your browser does not support the video tag.
+                  </video>
+                ))}
+                      </div>
+                    )}
+            <div style={{ fontWeight: 'bold', fontSize: 22, color: '#ffd600', textAlign: 'center', marginBottom: 8 }}>
+              {selectedItem.Title?.['en-US'] || selectedItem.name || selectedItem.title}
+                    </div>
+            <div style={{ color: '#ccc', fontSize: 16, marginBottom: 4, textAlign: 'center' }}>
+              by {selectedItem.DisplayProperties?.creatorName || 'Unknown'}
+                    </div>
+            <div style={{ color: '#aaa', fontSize: 13, marginBottom: 8, textAlign: 'center' }}>
+              ID: {selectedItem.Id || selectedItem.id}
+                    </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+              {(() => {
+                const tags = selectedItem.Tags || [];
+                const skinpackTags = tags.filter((tag: string) => tag.toLowerCase() === 'skinpack');
+                return skinpackTags.map((tag: string, i: number) => (
+                  <span key={i} style={{
+                    background: '#ffd600',
+                    color: '#222',
+                    borderRadius: 4,
+                    padding: '4px 10px',
+                    fontWeight: 'bold',
+                    fontSize: 14
+                  }}>{tag}</span>
+                ));
+              })()}
+            </div>
+            {/* Download section */}
+            {(() => {
+              const downloadItem = downloads.find(d => d.id.startsWith((selectedItem.Id || selectedItem.id) + '_'));
+              const isPending = downloadItem?.status === 'pending';
+              const isDownloading = downloadItem?.status === 'downloading';
+              return (
+                <div style={{ marginTop: 16 }}>
+                  {/* Download progress */}
+                  {downloadItem && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div className="download-progress" style={{ marginBottom: 8 }}>
+                        <div className="progress-bar" style={{ height: 12, background: '#333', borderRadius: 6 }}>
+                          <div
+                            className="progress-fill"
+                            style={{
+                              width: `${downloadItem.progress}%`,
+                              background: downloadItem.status === 'completed' ? '#4caf50' : '#ffd600',
+                              height: 12,
+                              borderRadius: 6,
+                              transition: 'width 0.2s'
+                            }}
+                          ></div>
+                        </div>
+                        <div className="progress-text" style={{ color: '#ffd600', fontSize: 14, marginTop: 4, textAlign: 'center' }}>
+                          {downloadItem.status === 'pending' ? 'Preparing download...' :
+                            downloadItem.totalSize > 0 ? `${downloadItem.progress.toFixed(1)}%` :
+                              downloadItem.downloadedSize > 0 ? 'Downloading...' : '0%'}
+                        </div>
+                      </div>
+                      <div className="download-stats" style={{ color: '#aaa', fontSize: 12, textAlign: 'center', marginBottom: 8 }}>
+                        {downloadItem.status === 'pending' ? (
+                          <span className="server-status">
+                            {downloadItem.serverStatus || 'Server fetching content...'}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="download-size">
+                              {downloadItem.totalSize > 0 ?
+                                `${formatBytes(downloadItem.downloadedSize)} / ${formatBytes(downloadItem.totalSize)}` :
+                                downloadItem.downloadedSize > 0 ?
+                                  `${formatBytes(downloadItem.downloadedSize)} downloaded` :
+                                  'Preparing...'
+                              }
+                            </span>
+                            {downloadItem.status === 'downloading' && downloadItem.speed > 0 && (
+                              <span className="download-speed" style={{ marginLeft: 8 }}>
+                                {formatSpeed(downloadItem.speed)}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Download button */}
+                  {(selectedItem.canDownload || (selectedItem.Tags && selectedItem.Tags.map((t: string) => t.toLowerCase()).includes('skinpack'))) && (
+                  <button
+                    onClick={() => {
+                      handleDownload(selectedItem.Id || selectedItem.id, selectedItem.Title?.['en-US'] || selectedItem.name || selectedItem.title || 'Unknown Title');
+                    }}
+                    disabled={isPending || isDownloading}
+                    style={{
+                      background: '#ffd600',
+                      color: '#222',
+                      fontWeight: 'bold',
+                      fontSize: 18,
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '12px 48px',
+                      margin: '0 auto',
+                      display: 'block',
+                      cursor: isPending || isDownloading ? 'not-allowed' : 'pointer',
+                      opacity: isPending || isDownloading ? 0.7 : 1,
+                      boxShadow: '0 2px 8px #0004',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      maxWidth: 300
+                    }}
+                  >
+                    {isPending ? 'Preparing...' :
+                     isDownloading ? 'Downloading...' :
+                     'Download'}
+                  </button>
+                  )}
+                </div>
+              );
+            })()}
+                    </div>
+                  </div>
+      , document.body)}
+    </div>
+  );
+}
+
+// NavigationBar component
+function NavigationBar() {
+  return (
+    <nav style={{ display: 'flex', gap: 16, padding: 16, background: '#222', alignItems: 'center', justifyContent: 'center' }}>
+      <Link to="/" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Home</Link>
+      <Link to="/search" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Search</Link>
+      <Link to="/browse" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Browse</Link>
+    </nav>
+  );
+}
+
+// HomePage component
+function HomePage() {
+  return (
+    <div className="centered-page" style={{ textAlign: 'center' }}>
+      <h1 style={{ color: '#ffd600', fontSize: 40, fontWeight: 'bold' }}>Welcome to Zero Marketplace</h1>
+      <p style={{ color: '#ccc', fontSize: 20, marginTop: 24 }}>Browse, search, and download Minecraft Marketplace content easily!</p>
+    </div>
+  );
+}
+
+// SearchPage component (moved search logic/UI here)
+function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: string, title: string) => void, downloads: any[] }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [noResultsError, setNoResultsError] = useState('');
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setLoading(true);
+    setError('');
+    setNoResultsError('');
+    setResults([]);
+    try {
+      const apiUrl = `${API_BASE_URL}/api/search`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer zerotwo'
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          search_type: 'name',
+          limit: 50
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.success) {
+        const searchResults = data.data || [];
+        setResults(searchResults);
+        if (searchResults.length === 0) {
+          setNoResultsError(`No results found for "${searchQuery}". Please try a different search term.`);
+          setTimeout(() => { setNoResultsError(''); }, 3000);
+        }
+      } else {
+        setError('Search failed. Please try again.');
+      }
+    } catch (err) {
+      setError('Failed to search. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  return (
+    <div className="centered-page" style={{ maxWidth: 800, width: '100%' }}>
+      <h2 style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 32, textAlign: 'center', marginBottom: 24 }}>Search Marketplace</h2>
+      <div className="search-container" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter NAME, UUID or URL"
+          className="search-input"
+          disabled={loading}
+          style={{ padding: 8, fontSize: 18, borderRadius: 6, border: '1px solid #888', width: 320 }}
+        />
+        <button
+          onClick={handleSearch}
+          className="search-button"
+          disabled={loading || !searchQuery.trim()}
+          style={{ background: '#ffd600', color: '#222', fontWeight: 'bold', fontSize: 18, border: 'none', borderRadius: 8, padding: '8px 32px', cursor: loading ? 'not-allowed' : 'pointer' }}
+        >
+          {loading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+      {error && <div className="error-message" style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
+      {noResultsError && <div className="no-results-error" style={{ color: '#ffd600', textAlign: 'center', marginBottom: 12 }}>{noResultsError}</div>}
+      {results.length > 0 && (
+        <div className="results-container">
+          <h3 style={{ color: '#ffd600', textAlign: 'center' }}>Search Results ({results.length})</h3>
+          <div className="results-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24, marginTop: 16 }}>
+            {results.map((result, index) => (
+              <ItemCard key={result.Id} item={result} index={index} onDownload={handleDownload} downloads={downloads} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// เพิ่มวิดีโอพื้นหลัง anime
+function BackgroundVideo() {
+  return (
+    <video className="background-video" autoPlay loop muted playsInline>
+      <source src="/zerotwo.mp4" type="video/mp4" />
+    </video>
+  );
+}
+
+function App() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [noResultsError, setNoResultsError] = useState('');
+  const [downloads, setDownloads] = useState<DownloadItem[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/health`, {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Bearer zerotwo'
+          },
+          signal: AbortSignal.timeout(5000)
+        });
+
+        const status = response.ok ? 'Online and Detected' : 'Detected but Error';
+        const environment = API_BASE_URL.includes('localhost') ? 'Local' : 'Production';
+
+        console.log(`
+███████╗███████╗██████╗  ██████╗ ████████╗██╗    ██╗ ██████╗ 
+╚══███╔╝██╔════╝██╔══██╗██╔═══██╗╚══██╔══╝██║    ██║██╔═══██╗
+  ███╔╝ █████╗  ██████╔╝██║   ██║   ██║   ██║ █╗ ██║██║   ██║
+ ███╔╝  ██╔══╝  ██╔══██╗██║   ██║   ██║   ██║███╗██║██║   ██║
+███████╗███████╗██║  ██║╚██████╔╝   ██║   ╚███╔███╔╝╚██████╔╝
+╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚══╝╚══╝  ╚═════╝ 
+
+ZerotwoAPI v0.2 - ${status} (${environment})
+Minecraft Marketplace Content Platform
+`);
+      } catch (error) {
+        const environment = API_BASE_URL.includes('localhost') ? 'Local' : 'Production';
+
+        console.log(`
+███████╗███████╗██████╗  ██████╗ ████████╗██╗    ██╗ ██████╗ 
+╚══███╔╝██╔════╝██╔══██╗██╔═══██╗╚══██╔══╝██║    ██║██╔═══██╗
+  ███╔╝ █████╗  ██████╔╝██║   ██║   ██║   ██║ █╗ ██║██║   ██║
+ ███╔╝  ██╔══╝  ██╔══██╗██║   ██║   ██║   ██║███╗██║██║   ██║
+███████╗███████╗██║  ██║╚██████╔╝   ██║   ╚███╔███╔╝╚██████╔╝
+╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚══╝╚══╝  ╚═════╝ 
+
+ZerotwoAPI v0.2 - Not Detected (${environment})
+Minecraft Marketplace Content Platform
+`);
+      }
+    };
+
+    checkApiStatus();
+
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    setLoading(true);
+    setError('');
+    setNoResultsError('');
+    setResults([]);
+
+    try {
+      const apiUrl = `${API_BASE_URL}/api/search`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer zerotwo'
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          search_type: 'name',
+          limit: 50
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const searchResults = data.data || [];
+        setResults(searchResults);
+
+        if (searchResults.length === 0) {
+          setNoResultsError(`No results found for "${searchQuery}". Please try a different search term.`);
+          setTimeout(() => {
+            setNoResultsError('');
+          }, 3000);
+        }
+
+        if (data.source && data.source.includes('local')) {
+          console.log('Using local data source for faster results');
+        }
+      } else {
+        setError('Search failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Search error:', err);
+      setError('Failed to search. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const addNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now().toString();
+    const notification: Notification = { id, message, type };
+    setNotifications(prev => [...prev, notification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  };
+
+  const handleDownload = async (itemId: string, title: string) => {
+    addNotification(`Starting download: ${title}`, 'info');
+    const uniqueDownloadId = `${itemId}_${Date.now()}`;
+    const downloadItem: DownloadItem = {
+      id: uniqueDownloadId,
+      title,
+      status: 'pending',
+      progress: 0,
+      totalSize: 0,
+      downloadedSize: 0,
+      speed: 0,
+      startTime: Date.now(),
+      serverStatus: 'Server fetching content...'
+    };
+    setDownloads(prev => [...prev, downloadItem]);
+    const serverStatusTimeout = setTimeout(() => {
+      setDownloads(prev => prev.map(d =>
+        d.id === uniqueDownloadId && d.status === 'pending' ? {
+          ...d,
+          serverStatus: 'Server processing... This may take a moment.'
+        } : d
+      ));
+    }, 3000);
+    try {
+      const apiUrl = `${API_BASE_URL}/api/download`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer zerotwo'
+        },
+        body: JSON.stringify({
+          item_id: itemId,
+          process_content: true
+        })
+      });
+      if (!response.ok) {
+        let errorMessage = `Download failed: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.detail && typeof errorData.detail === 'object') {
+            if (errorData.detail.error === 'missing_decryption_keys') {
+              errorMessage = `🔐 Missing Decryption Keys: ${errorData.detail.message}`;
+              addNotification(errorMessage, 'error');
+              setDownloads(prev => prev.filter(d => d.id !== uniqueDownloadId));
+              return;
+            } else {
+              errorMessage = errorData.detail.message || errorData.detail;
+            }
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+        } catch (parseError) {}
+        throw new Error(errorMessage);
+      }
+      const contentLength = response.headers.get('content-length');
+      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+      const contentTypes = response.headers.get('x-content-types') || 'Content Pack';
+      const hasMultipleTypes = response.headers.get('x-has-multiple-types') === 'true';
+      const totalFiles = response.headers.get('x-total-files') || '1';
+      const isProcessed = response.headers.get('x-processed') === 'true';
+      clearTimeout(serverStatusTimeout);
+      setDownloads(prev => prev.map(d =>
+        d.id === uniqueDownloadId ? {
+          ...d,
+          totalSize,
+          contentTypes: isProcessed ? `${contentTypes} (Processed)` : contentTypes,
+          hasMultipleTypes,
+          totalFiles,
+          status: 'downloading',
+          serverStatus: undefined
+        } : d
+      ));
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${title.replace(/[^a-z0-9]/gi, '_')}.mcpack`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+?)"/);
+        if (match) filename = match[1];
+      }
+      // 🔍 DEBUG LOG
+      console.log('contentDisposition:', contentDisposition);
+      console.log('filename:', filename);
+      console.log('contentTypes:', contentTypes);
+      // เปลี่ยนนามสกุลเฉพาะกรณี .zip เท่านั้น
+      if (filename.endsWith('.zip')) {
+        // ✅ Normalize contentTypes เช่น "Add-On" => "addon"
+        const normalizedType = contentTypes.toLowerCase().replace(/[\s\-_]/g, '');
+        let ext = '.mcpack';
+        if (normalizedType.includes('addon')) ext = '.mcaddon';
+        else if (normalizedType.includes('template')) ext = '.mctemplate';
+        else if (normalizedType.includes('skinpack')) ext = '.mcpack';
+        else if (normalizedType.includes('texture')) ext = '.mcpack';
+        filename = filename.replace(/\.zip$/, ext);
+      }
+  
+      const reader = response.body?.getReader();
+      const chunks: Uint8Array[] = [];
+      let downloadedSize = 0;
+      const startTime = Date.now();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value || value.length === 0) continue;
+        chunks.push(value);
+        downloadedSize += value.length;
+        const currentTime = Date.now();
+        const elapsedTime = (currentTime - startTime) / 1000;
+        const speed = elapsedTime > 0 ? downloadedSize / elapsedTime : 0;
+        const progress = totalSize > 0 ? (downloadedSize / totalSize) * 100 : 0;
+        const safeDownloadedSize = downloadedSize;
+        setDownloads(prev => prev.map(d =>
+          d.id === uniqueDownloadId ? {
+            ...d,
+            downloadedSize: safeDownloadedSize,
+            progress: Math.min(progress, 100),
+            speed
+          } : d
+        ));
+      }
+      // ใช้ type จาก header ถ้าเป็น .mcpack/.mcaddon/.mctemplate ให้เป็น octet-stream
+      let blobType = 'application/zip';
+      if (filename.endsWith('.mcpack') || filename.endsWith('.mcaddon') || filename.endsWith('.mctemplate')) {
+        blobType = 'application/octet-stream';
+      }
+      const blob = new Blob(chunks, { type: blobType });
+      if (blob.size === 0) throw new Error('Downloaded file is empty - no data received from server');
+      if (!window.URL || !window.URL.createObjectURL) throw new Error('Browser does not support file downloads');
+      try {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        addNotification(`Saving ${filename} to device...`, 'info');
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          if (document.body.contains(a)) {
+            document.body.removeChild(a);
+          }
+        }, 1000);
+      } catch (downloadError) {
+        addNotification('Unable to save file to device. Please check browser permissions.', 'error');
+      }
+      setDownloads(prev => prev.map(d =>
+        d.id === uniqueDownloadId ? { ...d, status: 'completed', progress: 100 } : d
+      ));
+      addNotification(`Download completed: ${title}`, 'success');
+      setTimeout(() => {
+        setDownloads(prev => prev.filter(d => d.id !== uniqueDownloadId));
+      }, 10000);
+    } catch (err) {
+      setDownloads(prev => prev.map(d =>
+        d.id === uniqueDownloadId ? { ...d, status: 'error' } : d
+      ));
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      addNotification(`Download failed: ${errorMessage}`, 'error');
+      setTimeout(() => {
+        setDownloads(prev => prev.filter(d => d.id !== uniqueDownloadId));
+      }, 5000);
+    }
+  };
+
+  const renderDownloadsPanel = (isMobile = false) => (
+    <div style={isMobile ? {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100vw',
+      height: '60vh',
+      background: '#222',
+      color: '#ffd600',
+      zIndex: 1200,
+      borderRadius: '16px 16px 0 0',
+      boxShadow: '0 -2px 16px #000a',
+      transition: 'transform 0.3s',
+      transform: isDownloadPanelOpen ? 'translateY(0)' : 'translateY(100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    } : {
+      position: 'fixed',
+      top: 0,
+      right: isDownloadPanelOpen ? 0 : -320,
+      width: 320,
+      height: '100vh',
+      background: '#222',
+      color: '#ffd600',
+      zIndex: 1200,
+      boxShadow: '-2px 0 8px #0004',
+      transition: 'right 0.3s',
+      overflow: 'hidden',
+    }}>
+      <div className="downloads-header" style={isMobile ? {padding: '16px 24px 8px', borderBottom: '1px solid #333', fontSize: 20, fontWeight: 'bold'} : {}}>
+        <h3 style={{margin: 0}}>Downloads</h3>
+        <button
+          className="close-panel-btn"
+          onClick={() => setIsDownloadPanelOpen(false)}
+          style={isMobile ? {position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer'} : {}}
+        >✕</button>
+      </div>
+      <div className="downloads-content" style={isMobile ? {flex: 1, overflowY: 'auto', padding: 16} : {}}>
+        {downloads.length === 0 ? (
+          <div className="no-downloads">No active downloads</div>
+        ) : (
+          downloads.map((download) => (
+            <div key={download.id} className={`download-item ${download.status}`}>
+              <div className="download-info">
+                <div className="download-title">{download.title}</div>
+                {download.contentTypes && (
+                  <div className="download-content-type">
+                    {download.contentTypes}
+                    {download.hasMultipleTypes && download.totalFiles && (
+                      <span className="file-count"> ({download.totalFiles} files)</span>
+                    )}
+                  </div>
+                )}
+                <div className="download-progress">
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${download.progress}%` }}
+                    ></div>
+                  </div>
+                  <div className="progress-text">
+                    {download.status === 'pending' ? 'Pending...' :
+                     download.totalSize > 0 ? `${download.progress.toFixed(1)}%` :
+                     download.downloadedSize > 0 ? 'Downloading...' : '0%'}
+                  </div>
+                </div>
+                <div className="download-stats">
+                  {download.status === 'pending' ? (
+                    <span className="server-status">
+                      {download.serverStatus || 'Preparing download...'}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="download-size">
+                        {download.totalSize > 0 ?
+                          `${formatBytes(download.downloadedSize)} / ${formatBytes(download.totalSize)}` :
+                          download.downloadedSize > 0 ?
+                            `${formatBytes(download.downloadedSize)} downloaded` :
+                            'Preparing...'
+                        }
+                      </span>
+                      {download.status === 'downloading' && download.speed > 0 && (
+                        <span className="download-speed">
+                          {formatSpeed(download.speed)}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="download-status">
+                {(download.status === 'pending' || download.status === 'downloading') && <div className="spinner-small"></div>}
+                {download.status === 'completed' && <span className="status-icon">✓</span>}
+                {download.status === 'error' && <span className="status-icon error">✗</span>}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <BackgroundVideo />
+      <NavigationBar />
+      {isMobile && isDownloadPanelOpen && (
+        <div
+          onClick={() => setIsDownloadPanelOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 1199
+          }}
+        />
+      )}
+      <button
+        onClick={() => setIsDownloadPanelOpen(open => !open)}
+        style={isMobile ? {
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 1201,
+          background: '#ffd600',
+          color: '#222',
+          border: 'none',
+          borderRadius: '50%',
+          width: 56,
+          height: 56,
+          fontWeight: 'bold',
+          fontSize: 22,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px #0004',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background 0.2s',
+        } : {
+          position: 'fixed',
+          top: 20,
+          right: isDownloadPanelOpen ? 320 : 0,
+          zIndex: 1201,
+          background: '#ffd600',
+          color: '#222',
+          border: 'none',
+          borderRadius: '8px 0 0 8px',
+          padding: '10px 18px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px #0004',
+          transition: 'right 0.3s',
+        }}
+      >
+        {isDownloadPanelOpen ? (isMobile ? '✕' : '→') : (isMobile ? '↓' : 'Downloads')}
+      </button>
+      {/* downloads panel */}
+      {isDownloadPanelOpen && renderDownloadsPanel(isMobile)}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/search" element={<SearchPage handleDownload={handleDownload} downloads={downloads} />} />
+        <Route path="/browse" element={<BrowsePage handleDownload={handleDownload} downloads={downloads} renderDownloadsPanel={renderDownloadsPanel} />} />
+      </Routes>
+    </>
+  );
+}
+
+export default App;
+
+export async function downloadFileFromApi(
+  itemId: string,
+  title: string,
+  apiUrl: string
+): Promise<void> {
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer zerotwo',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ item_id: itemId })
+    });
+
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = title + '.zip';
+    if (disposition && disposition.includes('filename=')) {
+      filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Download error');
+  }
+}
+
+
+
+
+
+
