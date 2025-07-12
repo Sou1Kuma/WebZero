@@ -1,4 +1,5 @@
 node_modules/
+<<<<<<< HEAD
 AppData/
 Downloads/
 Documents/
@@ -13,3 +14,5 @@ Music/
 .flutter/
 NTUSER.*
 ntuser.*
+=======
+>>>>>>> e0735459ff5dd0694fef0f2209e303d63c1e49ca

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MarkPE + MarkAPI source code
 
 This repository contains the source code for MarkPE, a web application for searching and downloading minecraft marketplace content, and MarkAPI, the Backend API that powers MarkPE.
@@ -73,3 +74,6 @@ Some marketplace content requires decryption keys to process properly. Without t
 This project was created for the Minecraft Community. Thanks to Lisa for creating this Website and Bluecoin Community for giving us permissions.
 
 The code was written by Lisa. You are free to make changes as long as you know what you are doing."# WebZero" 
+=======
+# WebZero
+>>>>>>> e0735459ff5dd0694fef0f2209e303d63c1e49ca
