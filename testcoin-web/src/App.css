@@ -1189,3 +1189,88 @@ nav a:hover, nav a.active {
 }
 
 /* Responsive: คงไว้เหมือนเดิม */
+
+.search-modern-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8e1f4 0%, #e0f0ff 100%);
+  padding: 40px 0;
+}
+
+.search-card {
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 4px 24px #ffe3fa;
+  border-radius: 18px;
+  padding: 32px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.search-results-fadein {
+  animation: searchFadeIn 0.8s ease-out;
+}
+
+@keyframes searchFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .centered-page {
+    max-width: 98vw !important;
+    width: 98vw !important;
+    padding: 0 2vw;
+  }
+  .search-card {
+    padding: 16px !important;
+    border-radius: 10px !important;
+    margin-bottom: 12px !important;
+  }
+  .results-container {
+    padding: 16px 4px !important;
+    border-radius: 10px !important;
+  }
+  .search-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    max-width: 98vw !important;
+    padding: 0 0 0 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .search-input {
+    width: 100% !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+    padding: 12px 12px 12px 38px !important;
+  }
+  .search-button {
+    width: 100% !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+    padding: 12px 0 !important;
+    margin-left: 0 !important;
+    height: 44px !important;
+  }
+  .search-card span[style*='position: absolute'] {
+    left: 12px !important;
+    top: 14px !important;
+    font-size: 18px !important;
+  }
+  h2 {
+    font-size: 26px !important;
+    margin-bottom: 12px !important;
+  }
+  h3 {
+    font-size: 18px !important;
+    margin-bottom: 12px !important;
+  }
+}
