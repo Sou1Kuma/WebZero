@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
 interface ItemCardProps {
   item: any;
@@ -36,22 +36,21 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, index, onSelect, onDownload, 
   // Badge state (ใช้ข้อมูลจาก backend โดยตรง)
   const canDownload = item.canDownload;
 
-  // Badge state
-  const [badgeStatus, setBadgeStatus] = useState<'green' | 'red' | null>(null);
-
   useEffect(() => {
     if (isSkinpack) {
-      setBadgeStatus('green');
+      // setBadgeStatus('green'); // This line is removed
     } else if (displayTags.length > 0) {
       // Only check for non-skinpack allowed tags
       fetch(`/api/check-id-in-keys?item_id=${id}`)
         .then(res => res.json())
         .then(data => {
-          setBadgeStatus(data.found ? 'green' : 'red');
+          // setBadgeStatus(data.found ? 'green' : 'red'); // This line is removed
         })
-        .catch(() => setBadgeStatus('red'));
+        .catch(() => {
+          // setBadgeStatus('red'); // This line is removed
+        });
     } else {
-      setBadgeStatus(null);
+      // setBadgeStatus(null); // This line is removed
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isSkinpack, displayTags.join(',')]);
@@ -131,6 +130,23 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, index, onSelect, onDownload, 
             >
               ไม่สามารถดาวน์โหลดได้
             </span>
+          )}
+          {(item.hasMultipleTypes || (item.totalFiles && Number(item.totalFiles) > 1)) && (
+            <div style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: '#ffd600',
+              color: '#222',
+              borderRadius: 6,
+              padding: '4px 10px',
+              fontWeight: 'bold',
+              fontSize: 13,
+              boxShadow: '0 1px 4px #0004',
+              zIndex: 2
+            }}>
+              Multiple Files (.zip)
+            </div>
           )}
         </div>
       )}
