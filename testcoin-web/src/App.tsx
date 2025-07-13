@@ -50,7 +50,7 @@ interface Notification {
 }
 
 // API config
-const API_BASE_URL = "https://apizero.onrender.com";
+const API_BASE_URL = "http://localhost:8000";
 
 // Utility functions for download display
 const formatBytes = (bytes: number): string => {
@@ -143,7 +143,11 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
         return res.json();
       })
       .then((data) => {
-        const items = data.data || data.items || [];
+        const items = (data.data || data.items || []).map((item: any) => ({
+          ...item,
+          hasMultipleTypes: item.hasMultipleTypes ?? item['hasMultipleTypes'] ?? item['X-Has-Multiple-Types'] === 'true',
+          totalFiles: item.totalFiles ?? item['totalFiles'] ?? item['X-Total-Files'] ?? 1,
+        }));
         console.log('API items:', items.length, items);
         // Enrich items with PlayFab images (เฉพาะถ้ายังไม่มี Images)
         if (items.length > 0 && !items[0].Images) {
@@ -187,14 +191,6 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
         setTotal(0);
       });
   }, [selectedTag, page, debouncedSearch, sort]);
-
-  const getThumbnailUrl = (images?: Array<{ Tag: string; Url: string }>) => {
-    if (!images || images.length === 0) return null;
-    const thumb = images.find(img => img.Tag === 'Thumbnail');
-    if (thumb && thumb.Url) return thumb.Url;
-    // fallback: use first image if no 'Thumbnail'
-    return images[0]?.Url || null;
-  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -529,8 +525,22 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
               const downloadItem = downloads.find(d => d.id.startsWith((selectedItem.Id || selectedItem.id) + '_'));
               const isPending = downloadItem?.status === 'pending';
               const isDownloading = downloadItem?.status === 'downloading';
+              // Show notice if multiple files (check both downloadItem and selectedItem)
+              const hasMultipleFiles =
+                (downloadItem?.hasMultipleTypes || (downloadItem?.totalFiles && Number(downloadItem.totalFiles) > 1)) ||
+                (selectedItem?.hasMultipleTypes || (selectedItem?.totalFiles && Number(selectedItem.totalFiles) > 1));
               return (
                 <div style={{ marginTop: 16 }}>
+                  {hasMultipleFiles && (
+                    <>
+                      <div style={{ color: '#ffd600', background: '#333', borderRadius: 8, padding: '8px 16px', marginBottom: 12, textAlign: 'center', fontWeight: 'bold' }}>
+                        This content contains multiple files. You will receive a .zip archive.
+                      </div>
+                      <div style={{ color: '#ffd600', background: 'none', fontSize: 15, textAlign: 'center', marginBottom: 12 }}>
+                        After downloading, please extract the <b>.zip</b> file to access all included packs (such as worlds, skins, or add-ons).
+                      </div>
+                    </>
+                  )}
                   {/* Download progress */}
                   {downloadItem && (
                     <div style={{ marginBottom: 12 }}>
@@ -620,12 +630,13 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
 }
 
 // NavigationBar component
-function NavigationBar() {
+function NavigationBar({ onShowCredits }: { onShowCredits: () => void }) {
   return (
     <nav style={{ display: 'flex', gap: 16, padding: 16, background: '#222', alignItems: 'center', justifyContent: 'center' }}>
       <Link to="/" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Home</Link>
       <Link to="/search" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Search</Link>
       <Link to="/browse" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Browse</Link>
+      <span onClick={onShowCredits} style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18, cursor: 'pointer' }}>About</span>
     </nav>
   );
 }
@@ -696,40 +707,50 @@ function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: st
   };
 
   return (
-    <div className="centered-page" style={{ maxWidth: 800, width: '100%' }}>
-      <h2 style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 32, textAlign: 'center', marginBottom: 24 }}>Search Marketplace</h2>
-      <div className="search-container" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter NAME, UUID or URL"
-          className="search-input"
-          disabled={loading}
-          style={{ padding: 8, fontSize: 18, borderRadius: 6, border: '1px solid #888', width: 320 }}
-        />
-        <button
-          onClick={handleSearch}
-          className="search-button"
-          disabled={loading || !searchQuery.trim()}
-          style={{ background: '#ffd600', color: '#222', fontWeight: 'bold', fontSize: 18, border: 'none', borderRadius: 8, padding: '8px 32px', cursor: loading ? 'not-allowed' : 'pointer' }}
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-      {error && <div className="error-message" style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
-      {noResultsError && <div className="no-results-error" style={{ color: '#ffd600', textAlign: 'center', marginBottom: 12 }}>{noResultsError}</div>}
-      {results.length > 0 && (
-        <div className="results-container">
-          <h3 style={{ color: '#ffd600', textAlign: 'center' }}>Search Results ({results.length})</h3>
-          <div className="results-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24, marginTop: 16 }}>
-            {results.map((result, index) => (
-              <ItemCard key={result.Id} item={result} index={index} onDownload={handleDownload} downloads={downloads} />
-            ))}
+    <div className="search-modern-bg" style={{ minHeight: '100vh', padding: '40px 0', background: 'transparent' }}>
+      <div className="centered-page" style={{ maxWidth: 800, width: '100%', margin: '0 auto' }}>
+        <h2 style={{ color: '#a85fff', fontWeight: 'bold', fontSize: 40, textAlign: 'center', marginBottom: 18, letterSpacing: 1 }}>Search Marketplace</h2>
+        <div className="search-card" style={{ background: 'rgba(255,255,255,0.65)', boxShadow: '0 4px 24px #ffe3fa', borderRadius: 18, padding: 32, marginBottom: 18, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div className="search-container" style={{ display: 'flex', gap: 0, alignItems: 'center', width: '100%', maxWidth: 420, background: 'white', borderRadius: 12, boxShadow: '0 2px 8px #ffe3fa', padding: '0 0 0 12px', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 18, color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter NAME, UUID or URL"
+              className="search-input"
+              disabled={loading}
+              style={{ padding: '12px 16px 12px 44px', fontSize: 18, borderRadius: 12, border: '2px solid #b6eaff', width: 320, background: 'transparent', color: '#a85fff', outline: 'none', boxShadow: 'none' }}
+            />
+            <button
+              onClick={handleSearch}
+              className="search-button"
+              disabled={loading || !searchQuery.trim()}
+              style={{ background: 'linear-gradient(90deg, #ffb6e6 0%, #b6eaff 100%)', color: '#a85fff', fontWeight: 'bold', fontSize: 18, border: 'none', borderRadius: '0 12px 12px 0', padding: '12px 32px', cursor: loading ? 'not-allowed' : 'pointer', marginLeft: -2, height: 48 }}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+          <div style={{ color: '#b6eaff', fontSize: 15, marginTop: 10, textAlign: 'center' }}>
+            Tip: You can search by <span style={{ color: '#a85fff', fontWeight: 600 }}>name</span>, <span style={{ color: '#a85fff', fontWeight: 600 }}>UUID</span>, or <span style={{ color: '#a85fff', fontWeight: 600 }}>Marketplace URL</span>.
           </div>
         </div>
-      )}
+        {error && <div className="error-message" style={{ color: 'white', background: '#ff4444', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
+        {noResultsError && <div className="no-results-error" style={{ color: 'white', background: '#ff9800', textAlign: 'center', marginBottom: 12 }}>{noResultsError}</div>}
+        {results.length > 0 && (
+          <div className="results-container search-results-fadein" style={{ boxShadow: '0 4px 32px #ffe3fa', borderRadius: 18, background: 'rgba(255,255,255,0.65)', padding: '32px 18px', marginTop: 32 }}>
+            <h3 style={{ color: '#a85fff', textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 24, letterSpacing: 1 }}>Search Results ({results.length})</h3>
+            <div className="results-list">
+              {results.map((result, index) => (
+                <ItemCard key={result.Id} item={result} index={index} onDownload={handleDownload} downloads={downloads} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -752,8 +773,8 @@ function App() {
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showCredits, setShowCredits] = useState(false);
 
   useEffect(() => {
     const checkApiStatus = async () => {
@@ -800,7 +821,7 @@ Minecraft Marketplace Content Platform
     checkApiStatus();
 
     const timer = setTimeout(() => {
-      setIsInitialLoad(false);
+      // setIsInitialLoad(false); // This line was removed as per the edit hint
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -965,17 +986,17 @@ Minecraft Marketplace Content Platform
       console.log('contentDisposition:', contentDisposition);
       console.log('filename:', filename);
       console.log('contentTypes:', contentTypes);
-      // เปลี่ยนนามสกุลเฉพาะกรณี .zip เท่านั้น
-      if (filename.endsWith('.zip')) {
-        // ✅ Normalize contentTypes เช่น "Add-On" => "addon"
-        const normalizedType = contentTypes.toLowerCase().replace(/[\s\-_]/g, '');
-        let ext = '.mcpack';
-        if (normalizedType.includes('addon')) ext = '.mcaddon';
-        else if (normalizedType.includes('template')) ext = '.mctemplate';
-        else if (normalizedType.includes('skinpack')) ext = '.mcpack';
-        else if (normalizedType.includes('texture')) ext = '.mcpack';
-        filename = filename.replace(/\.zip$/, ext);
-      }
+      // --- Remove the block that changes .zip to .mcpack/.mcaddon/.mctemplate ---
+      // if (filename.endsWith('.zip')) {
+      //   const normalizedType = contentTypes.toLowerCase().replace(/[  -\s\-_]/g, '');
+      //   let ext = '.mcpack';
+      //   if (normalizedType.includes('addon')) ext = '.mcaddon';
+      //   else if (normalizedType.includes('template')) ext = '.mctemplate';
+      //   else if (normalizedType.includes('skinpack')) ext = '.mcpack';
+      //   else if (normalizedType.includes('texture')) ext = '.mcpack';
+      //   filename = filename.replace(/\.zip$/, ext);
+      // }
+      // --- Always use the filename from backend ---
   
       const reader = response.body?.getReader();
       const chunks: Uint8Array[] = [];
@@ -1156,7 +1177,67 @@ Minecraft Marketplace Content Platform
   return (
     <>
       <BackgroundVideo />
-      <NavigationBar />
+      <NavigationBar onShowCredits={() => setShowCredits(true)} />
+      {showCredits && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+          onClick={() => setShowCredits(false)}
+        >
+          <div
+            style={{
+              background: '#181818',
+              borderRadius: 16,
+              padding: 32,
+              minWidth: 320,
+              maxWidth: 400,
+              color: '#ffd600',
+              boxShadow: '0 4px 32px #000a',
+              position: 'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowCredits(false)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 16,
+                background: 'none',
+                border: 'none',
+                color: '#ffd600',
+                fontSize: 28,
+                cursor: 'pointer',
+              }}
+            >×</button>
+            <h2 style={{ color: '#ffd600', marginBottom: 12 }}>Credits & About</h2>
+            <div style={{ color: '#fff', fontSize: 16, marginBottom: 16 }}>
+              This project was created for the Minecraft community.<br />
+              Thanks to Lisa and Bluecoin Community.<br />
+              <br />
+              <b>Contact & Links:</b>
+              <ul style={{ color: '#ffd600', fontSize: 15, margin: '10px 0 0 0', padding: 0, listStyle: 'none' }}>
+                <li>
+                  <a href="https://discord.gg/your-discord-link" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd600', textDecoration: 'underline' }}>
+                    Discord Community
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com/your-github-link" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd600', textDecoration: 'underline' }}>
+                    GitHub
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
       {isMobile && isDownloadPanelOpen && (
         <div
           onClick={() => setIsDownloadPanelOpen(false)}
