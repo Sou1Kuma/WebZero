@@ -9,9 +9,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import ItemCard from './ItemCard';
 import ReactDOM from 'react-dom';
+import LoginForm from './LoginForm';
 
 interface SearchResult {
   Id: string;
@@ -50,7 +51,7 @@ interface Notification {
 }
 
 // API config
-const API_BASE_URL = "https://apizero.onrender.com";
+const API_BASE = "http://localhost:8000";
 
 // Utility functions for download display
 const formatBytes = (bytes: number): string => {
@@ -115,13 +116,13 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
 
     // ถ้าเลือก tag skinpack ให้ใช้ API หลัก (api.py)
     if (selectedTag === 'skinpack') {
-      url = `${API_BASE_URL}/api/browse-skinpack?page=${page}&page_size=${pageSize}`;
+      url = `${API_BASE}/api/browse-skinpack?page=${page}&page_size=${pageSize}`;
       if (debouncedSearch.trim()) {
         url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
       }
       headers['Authorization'] = 'Bearer zerotwo';
     } else {
-      url = `${API_BASE_URL}/api/browse-local?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&_=${Date.now()}`;
+      url = `${API_BASE}/api/browse-local?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&_=${Date.now()}`;
       if (debouncedSearch.trim()) {
         url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
       }
@@ -130,7 +131,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
 
     // For /api/browse, add sort param
     if (selectedTag !== 'skinpack' && selectedTag !== 'all') {
-      url = `${API_BASE_URL}/api/browse?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&sort=${sort}`;
+      url = `${API_BASE}/api/browse?page=${page}&page_size=${pageSize}&content_type=${selectedTag}&sort=${sort}`;
       if (debouncedSearch.trim()) {
         url += `&search=${encodeURIComponent(debouncedSearch.trim())}`;
       }
@@ -153,7 +154,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
         if (items.length > 0 && !items[0].Images) {
           const itemIds = items.map((item: any) => item.Id || item.id).filter(Boolean);
           if (itemIds.length > 0) {
-            fetch(`${API_BASE_URL}/api/enrich-images`, {
+            fetch(`${API_BASE}/api/enrich-images`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -204,7 +205,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       return;
     }
     setModalLoading(true);
-    fetch(`${API_BASE_URL}/api/enrich-images`, {
+    fetch(`${API_BASE}/api/enrich-images`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -292,26 +293,28 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       {drawerOpen && (
         <div className="filter-drawer-overlay" onClick={() => setDrawerOpen(false)}></div>
       )}
-      {/* Drawer itself */}
-      <div className={`filter-drawer${drawerOpen ? ' open' : ''}`}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
-          >×</button>
-          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
-          {tags.map((tag) => (
+      {/* Drawer itself: only render when open */}
+      {drawerOpen && (
+        <div className={`filter-drawer open`}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
             <button
-              key={tag.value}
-              className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
-              onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
-              style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
-            >
-              {tag.label}
-            </button>
-          ))}
+              onClick={() => setDrawerOpen(false)}
+              style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
+            >×</button>
+            <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
+            {tags.map((tag) => (
+              <button
+                key={tag.value}
+                className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
+                onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
+                style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <div className="browse-content" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
         {/* Desktop filter (hidden on mobile) */}
         <div className="filter-sidebar">
@@ -346,33 +349,35 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
               {items.length === 0 ? (
                 <div style={{ textAlign: 'center', color: '#ffd600', fontSize: 20, marginTop: 40 }}>No items found.</div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 24,
-                  marginTop: 8
-                }}>
-                  {items.map((item, idx) => {
-                    const downloadItem = downloads.find(d => d.id.startsWith((item.Id || item.id) + '_'));
-                    const isPending = downloadItem?.status === 'pending';
-                    const isDownloading = downloadItem?.status === 'downloading';
-                    return (
-                      <ItemCard
-                        key={item.Id || item.id || idx}
-                        item={item}
-                        index={idx}
-                        onSelect={setSelectedItem}
-                      />
-                    );
-                  })}
-                </div>
+                <>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: 24,
+                    marginTop: 8
+                  }}>
+                    {items.map((item, idx) => {
+                      const downloadItem = downloads.find(d => d.id.startsWith((item.Id || item.id) + '_'));
+                      const isPending = downloadItem?.status === 'pending';
+                      const isDownloading = downloadItem?.status === 'downloading';
+                      return (
+                        <ItemCard
+                          key={item.Id || item.id || idx}
+                          item={item}
+                          index={idx}
+                          onSelect={setSelectedItem}
+                        />
+                      );
+                    })}
+                  </div>
+                  {/* pagination */}
+                  <div className="browse-pagination" style={{ marginTop: 24, textAlign: 'center' }}>
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
+                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+                    <span style={{ marginLeft: 12, color: '#ffd600', fontWeight: 'bold' }}>Page {page} / {totalPages}</span>
+                  </div>
+                </>
               )}
-              {/* pagination */}
-              <div className="browse-pagination" style={{ marginTop: 24, textAlign: 'center' }}>
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
-                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
-                <span style={{ marginLeft: 12, color: '#ffd600', fontWeight: 'bold' }}>Page {page} / {totalPages}</span>
-              </div>
             </>
           )}
         </div>
@@ -632,11 +637,33 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
 // NavigationBar component
 function NavigationBar({ onShowCredits }: { onShowCredits: () => void }) {
   return (
-    <nav style={{ display: 'flex', gap: 16, padding: 16, background: '#222', alignItems: 'center', justifyContent: 'center' }}>
-      <Link to="/" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Home</Link>
-      <Link to="/search" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Search</Link>
-      <Link to="/browse" style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18 }}>Browse</Link>
-      <span onClick={onShowCredits} style={{ color: '#ffd600', fontWeight: 'bold', textDecoration: 'none', fontSize: 18, cursor: 'pointer' }}>About</span>
+    <nav style={{
+      position: 'relative',
+      zIndex: 10,
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '2rem',
+      marginTop: '1.5rem',
+    }}>
+      <a href="/" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Home</a>
+      <a href="/search" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Search</a>
+      <a href="/browse" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Browse</a>
+      <a href="/about" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>About</a>
+      <button onClick={onShowCredits} style={{
+        marginLeft: '2rem',
+        background: '#ff4d4f',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 6,
+        padding: '0.3rem 1.2rem',
+        fontWeight: 600,
+        fontSize: 16,
+        cursor: 'pointer',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
+        transition: 'background 0.2s',
+        zIndex: 10,
+      }}>Logout</button>
     </nav>
   );
 }
@@ -666,7 +693,7 @@ function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: st
     setNoResultsError('');
     setResults([]);
     try {
-      const apiUrl = `${API_BASE_URL}/api/search`;
+      const apiUrl = `${API_BASE}/api/search`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -764,6 +791,121 @@ function BackgroundVideo() {
   );
 }
 
+function AuthDemo() {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [user, setUser] = useState<any>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      if (mode === 'register') {
+        const res = await fetch(`${API_BASE}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || 'Register failed');
+        alert('Register success! Please login.');
+        setMode('login');
+      } else {
+        const res = await fetch(`${API_BASE}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
+        const data = await res.json();
+        setToken(data.access_token);
+        localStorage.setItem('token', data.access_token);
+        fetchMe(data.access_token);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMe = async (tk?: string) => {
+    const accessToken = tk || token;
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/me`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch user');
+      setUser(await res.json());
+    } catch {
+      setUser(null);
+    }
+  };
+
+  React.useEffect(() => {
+    if (token && !user) fetchMe();
+  }, [token]);
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+  };
+
+  if (token && user) {
+    return (
+      <div style={{ maxWidth: 400, margin: '2rem auto', padding: 24, border: '1px solid #ccc', borderRadius: 8 }}>
+        <h2>Welcome, {user.username}</h2>
+        <button onClick={handleLogout}>Logout</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 400, margin: '2rem auto', padding: 24, border: '1px solid #ccc', borderRadius: 8 }}>
+      <h2>{mode === 'login' ? 'Login' : 'Register'}</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 12 }}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            required
+            style={{ width: '100%', padding: 8 }}
+          />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            style={{ width: '100%', padding: 8 }}
+          />
+        </div>
+        {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
+        <button type="submit" disabled={loading} style={{ width: '100%', padding: 8 }}>
+          {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Register'}
+        </button>
+      </form>
+      <div style={{ marginTop: 16 }}>
+        {mode === 'login' ? (
+          <span>Don't have an account? <button onClick={() => setMode('register')}>Register</button></span>
+        ) : (
+          <span>Already have an account? <button onClick={() => setMode('login')}>Login</button></span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -775,11 +917,18 @@ function App() {
   const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showCredits, setShowCredits] = useState(false);
+  
+  // Authentication states
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/health`, {
+        const response = await fetch(`${API_BASE}/api/health`, {
           method: 'GET',
           headers: {
             'Authorization': 'Bearer zerotwo'
@@ -788,7 +937,7 @@ function App() {
         });
 
         const status = response.ok ? 'Online and Detected' : 'Detected but Error';
-        const environment = API_BASE_URL.includes('localhost') ? 'Local' : 'Production';
+        const environment = API_BASE.includes('localhost') ? 'Local' : 'Production';
 
         console.log(`
 ███████╗███████╗██████╗  ██████╗ ████████╗██╗    ██╗ ██████╗ 
@@ -802,7 +951,7 @@ ZerotwoAPI v0.2 - ${status} (${environment})
 Minecraft Marketplace Content Platform
 `);
       } catch (error) {
-        const environment = API_BASE_URL.includes('localhost') ? 'Local' : 'Production';
+        const environment = API_BASE.includes('localhost') ? 'Local' : 'Production';
 
         console.log(`
 ███████╗███████╗██████╗  ██████╗ ████████╗██╗    ██╗ ██████╗ 
@@ -827,6 +976,13 @@ Minecraft Marketplace Content Platform
     return () => clearTimeout(timer);
   }, []);
 
+  // Check authentication on mount
+  useEffect(() => {
+    if (token && !user) {
+      fetchMe();
+    }
+  }, [token]);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -842,7 +998,7 @@ Minecraft Marketplace Content Platform
     setResults([]);
 
     try {
-      const apiUrl = `${API_BASE_URL}/api/search`;
+      const apiUrl = `${API_BASE}/api/search`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -927,7 +1083,7 @@ Minecraft Marketplace Content Platform
       ));
     }, 3000);
     try {
-      const apiUrl = `${API_BASE_URL}/api/download`;
+      const apiUrl = `${API_BASE}/api/download`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -1174,10 +1330,156 @@ Minecraft Marketplace Content Platform
     </div>
   );
 
+  const handleLogin = async (username: string, password: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
+      const data = await res.json();
+      setToken(data.access_token);
+      localStorage.setItem('token', data.access_token);
+      fetchMe(data.access_token);
+    } catch (err: any) {
+      setAuthError(err.message || 'Error');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async (username: string, password: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Register failed');
+      alert('Register success! Please login.');
+      setMode('login');
+    } catch (err: any) {
+      setAuthError(err.message || 'Error');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const fetchMe = async (tk?: string) => {
+    const accessToken = tk || token;
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/me`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch user');
+      setUser(await res.json());
+    } catch {
+      setUser(null);
+    }
+  };
+
+  React.useEffect(() => {
+    if (token && !user) fetchMe();
+  }, [token]);
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+  };
+
+  // วิดีโอพื้นหลัง (แสดงตลอด)
+  const backgroundVideo = (
+    <>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="login-bg-video"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          objectFit: 'cover',
+          zIndex: 0,
+          pointerEvents: 'none',
+          filter: 'brightness(0.5)'
+        }}
+      >
+        <source src="/zerotwo.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0,0,0,0.0)', // overlay สว่างขึ้น
+        zIndex: 1,
+        pointerEvents: 'none',
+      }} />
+    </>
+  );
+
+  // ถ้ายังไม่ได้ล็อกอิน ให้แสดงเฉพาะ LoginForm
+  if (!token || !user) {
+    return (
+      <>
+        {backgroundVideo}
+        <LoginForm
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          mode={mode}
+          setMode={setMode}
+          loading={authLoading}
+          error={authError}
+        />
+      </>
+    );
+  }
+
+  // ล็อกอินแล้ว: แสดงเมนูหลัก (z-index:10) และเนื้อหาเว็บปกติ
   return (
     <>
-      <BackgroundVideo />
-      <NavigationBar onShowCredits={() => setShowCredits(true)} />
+      {backgroundVideo}
+      <nav style={{
+        position: 'relative',
+        zIndex: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '2rem',
+        marginTop: '1.5rem',
+      }}>
+        <Link to="/" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Home</Link>
+        <Link to="/search" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Search</Link>
+        <Link to="/browse" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Browse</Link>
+        <Link to="/about" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>About</Link>
+        <button onClick={handleLogout} style={{
+          marginLeft: '2rem',
+          background: '#ff4d4f',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 6,
+          padding: '0.3rem 1.2rem',
+          fontWeight: 600,
+          fontSize: 16,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
+          transition: 'background 0.2s',
+          zIndex: 10,
+        }}>Logout</button>
+      </nav>
       {showCredits && (
         <div style={{
           position: 'fixed',
@@ -1294,6 +1596,9 @@ Minecraft Marketplace Content Platform
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage handleDownload={handleDownload} downloads={downloads} />} />
         <Route path="/browse" element={<BrowsePage handleDownload={handleDownload} downloads={downloads} renderDownloadsPanel={renderDownloadsPanel} />} />
+        <Route path="/about" element={<HomePage />} />
+        <Route path="/register" element={<AuthDemo />} />
+        <Route path="/login" element={<AuthDemo />} />
       </Routes>
     </>
   );
