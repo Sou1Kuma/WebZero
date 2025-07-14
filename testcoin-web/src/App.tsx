@@ -51,7 +51,7 @@ interface Notification {
 }
 
 // API config
-const API_BASE = "https://apizero.onrender.com/";
+const API_BASE = "https://apizero.onrender.com";
 
 // Utility functions for download display
 const formatBytes = (bytes: number): string => {
