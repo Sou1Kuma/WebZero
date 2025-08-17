@@ -696,7 +696,6 @@ function NavigationBar({ onShowCredits, user, onLogout }: { onShowCredits: () =>
         zIndex: 10,
       }}>Credits</button>
       <button onClick={onLogout} style={{
-        marginLeft: '2rem',
         background: '#ff4d4f',
         color: '#fff',
         border: 'none',

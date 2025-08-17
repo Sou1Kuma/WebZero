@@ -38,13 +38,16 @@ nav {
   background: rgba(255,255,255,0.06) !important;
   box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   border-radius: 16px;
-  padding: 12px 32px;
+  padding: 10px 20px;
   margin: 0 auto 24px auto;
   display: flex;
-  gap: 18px;
+  gap: 14px;
   justify-content: center;
   align-items: center;
-  max-width: 700px;
+  max-width: 960px;
+  width: calc(100% - 32px);
+  flex-wrap: wrap;
+  overflow: hidden; /* keep children inside rounded glass */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.12);
@@ -53,15 +56,21 @@ nav a {
   color: #ffd600;
   font-weight: bold;
   text-decoration: none;
-  font-size: 1.05em;
-  padding: 8px 16px;
+  font-size: 1.02em;
+  padding: 8px 14px;
   border-radius: 10px;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
 }
 nav a:hover, nav a.active {
   background: rgba(255,255,255,0.10);
   color: #ffe88a;
   box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+/* Ensure nav buttons also don't wrap oddly */
+nav button {
+  white-space: nowrap;
 }
 
 .search-container {
@@ -975,6 +984,19 @@ nav a:hover, nav a.active {
   box-shadow: 0 8px 20px rgba(0,0,0,0.35);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Mobile tuning for nav and category buttons */
+@media (max-width: 640px) {
+  nav {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .browse-btn {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 12px 16px;
+  }
 }
 .browse-pagination {
   background: rgba(0,0,0,0.7);
