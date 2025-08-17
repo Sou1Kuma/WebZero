@@ -51,7 +51,7 @@ interface Notification {
 }
 
 // API config
-const API_BASE = "https://apizero.onrender.com";
+const API_BASE = "http://localhost:8000";
 
 // Utility functions for download display
 const formatBytes = (bytes: number): string => {
@@ -261,6 +261,34 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
   return (
     <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
       <h2 style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 32, textAlign: 'center', marginBottom: 24 }}>Browse Marketplace</h2>
+      {/* ช่องค้นหาใหม่ (เด่นขึ้น อยู่บนสุด) */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ position: 'relative', width: 400 }}>
+          <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search content in marketplace..."
+            style={{
+              width: '100%',
+              padding: '14px 16px 14px 48px',
+              fontSize: 20,
+              borderRadius: 12,
+              border: '2px solid #ffd600',
+              boxShadow: '0 2px 12px #ffd60033',
+              outline: 'none',
+              color: '#a85fff',
+              background: '#181818',
+              marginBottom: 0
+            }}
+            onKeyDown={e => { if (e.key === 'Enter') setDebouncedSearch(search); }}
+          />
+        </div>
+      </div>
+      {/* เดิม: filter/sort bar */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <label style={{ color: '#ffd600', fontWeight: 'bold', marginRight: 8 }}>Sort by:</label>
         <select value={sort} onChange={e => setSort(e.target.value as 'created' | 'updated')} style={{ fontSize: 16, borderRadius: 6, padding: '4px 12px' }}>
@@ -293,28 +321,26 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       {drawerOpen && (
         <div className="filter-drawer-overlay" onClick={() => setDrawerOpen(false)}></div>
       )}
-      {/* Drawer itself: only render when open */}
-      {drawerOpen && (
-        <div className={`filter-drawer open`}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
+      {/* Drawer itself */}
+      <div className={`filter-drawer${drawerOpen ? ' open' : ''}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
+          >×</button>
+          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
+          {tags.map((tag) => (
             <button
-              onClick={() => setDrawerOpen(false)}
-              style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
-            >×</button>
-            <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
-            {tags.map((tag) => (
-              <button
-                key={tag.value}
-                className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
-                onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
-                style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
-              >
-                {tag.label}
-              </button>
-            ))}
-          </div>
+              key={tag.value}
+              className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
+              onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
+              style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
+            >
+              {tag.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
       <div className="browse-content" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
         {/* Desktop filter (hidden on mobile) */}
         <div className="filter-sidebar">
@@ -334,13 +360,14 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', marginBottom: 18, gap: 12 }}>
-            <input
+            {/* ช่องค้นหาเดิม ลบออก เพราะย้ายไปด้านบนแล้ว */}
+            {/* <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search for content..."
               style={{ width: 320, padding: 8, fontSize: 16, borderRadius: 6, border: '1px solid #888' }}
-            />
+            /> */}
           </div>
           {loading ? (
             <div style={{ textAlign: 'center', color: '#ffd600', fontSize: 20, marginTop: 40 }}>Loading...</div>
@@ -635,7 +662,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
 }
 
 // NavigationBar component
-function NavigationBar({ onShowCredits }: { onShowCredits: () => void }) {
+function NavigationBar({ onShowCredits, user, onLogout }: { onShowCredits: () => void, user: any, onLogout: () => void }) {
   return (
     <nav style={{
       position: 'relative',
@@ -646,11 +673,29 @@ function NavigationBar({ onShowCredits }: { onShowCredits: () => void }) {
       gap: '2rem',
       marginTop: '1.5rem',
     }}>
-      <a href="/" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Home</a>
-      <a href="/search" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Search</a>
-      <a href="/browse" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Browse</a>
-      <a href="/about" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>About</a>
+      <Link to="/" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Home</Link>
+      <Link to="/search" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Search</Link>
+      <Link to="/browse" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Browse</Link>
+      {user && user.role === 'admin' && (
+        <Link to="/aboutme" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>เกี่ยวกับฉัน</Link>
+      )}
+      {user && (
+        <Link to="/profile" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>โปรไฟล์</Link>
+      )}
       <button onClick={onShowCredits} style={{
+        background: '#ffd600',
+        color: '#222',
+        border: 'none',
+        borderRadius: 6,
+        padding: '0.3rem 1.2rem',
+        fontWeight: 600,
+        fontSize: 16,
+        cursor: 'pointer',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
+        transition: 'background 0.2s',
+        zIndex: 10,
+      }}>Credits</button>
+      <button onClick={onLogout} style={{
         marginLeft: '2rem',
         background: '#ff4d4f',
         color: '#fff',
@@ -671,9 +716,20 @@ function NavigationBar({ onShowCredits }: { onShowCredits: () => void }) {
 // HomePage component
 function HomePage() {
   return (
-    <div className="centered-page" style={{ textAlign: 'center' }}>
+    <div className="centered-page" style={{ textAlign: 'center', marginTop: 40 }}>
       <h1 style={{ color: '#ffd600', fontSize: 40, fontWeight: 'bold' }}>Welcome to Zero Marketplace</h1>
-      <p style={{ color: '#ccc', fontSize: 20, marginTop: 24 }}>Browse, search, and download Minecraft Marketplace content easily!</p>
+      <p style={{ color: '#ccc', fontSize: 20, marginTop: 24 }}>
+        Browse, search, and download Minecraft Marketplace content easily!<br />
+        <span style={{ color: '#ffd600', fontWeight: 600 }}>Features:</span>
+        <ul style={{ color: '#fff', fontSize: 18, margin: '18px auto', maxWidth: 500, textAlign: 'left', lineHeight: 1.7 }}>
+          <li>🔍 ค้นหา Marketplace ด้วยชื่อ, UUID, หรือ URL</li>
+          <li>📦 ดาวน์โหลด Add-ons, Worlds, Skins, Texturepacks</li>
+          <li>⚡ ระบบดาวน์โหลดเร็ว รองรับหลายไฟล์ (.zip)</li>
+          <li>🖼️ แสดงภาพตัวอย่างและวิดีโอ</li>
+          <li>🔒 ระบบล็อกอิน/สมัครสมาชิก</li>
+        </ul>
+        <Link to="/browse" style={{ background: '#ffd600', color: '#222', fontWeight: 'bold', fontSize: 20, borderRadius: 8, padding: '12px 36px', textDecoration: 'none', boxShadow: '0 2px 8px #0004', marginTop: 18, display: 'inline-block' }}>Browse Now</Link>
+      </p>
     </div>
   );
 }
@@ -1452,34 +1508,7 @@ Minecraft Marketplace Content Platform
   return (
     <>
       {backgroundVideo}
-      <nav style={{
-        position: 'relative',
-        zIndex: 10,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '2rem',
-        marginTop: '1.5rem',
-      }}>
-        <Link to="/" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Home</Link>
-        <Link to="/search" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Search</Link>
-        <Link to="/browse" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>Browse</Link>
-        <Link to="/about" style={{ color: '#FFD600', fontWeight: 700, fontSize: 18, textDecoration: 'none' }}>About</Link>
-        <button onClick={handleLogout} style={{
-          marginLeft: '2rem',
-          background: '#ff4d4f',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 6,
-          padding: '0.3rem 1.2rem',
-          fontWeight: 600,
-          fontSize: 16,
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-          transition: 'background 0.2s',
-          zIndex: 10,
-        }}>Logout</button>
-      </nav>
+      <NavigationBar onShowCredits={() => setShowCredits(true)} user={user} onLogout={handleLogout} />
       {showCredits && (
         <div style={{
           position: 'fixed',
@@ -1596,7 +1625,13 @@ Minecraft Marketplace Content Platform
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage handleDownload={handleDownload} downloads={downloads} />} />
         <Route path="/browse" element={<BrowsePage handleDownload={handleDownload} downloads={downloads} renderDownloadsPanel={renderDownloadsPanel} />} />
-        <Route path="/about" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        {user && user.role === 'admin' && (
+          <Route path="/aboutme" element={<AboutMePage handleDownload={handleDownload} downloads={downloads} />} />
+        )}
+        {user && (
+          <Route path="/profile" element={<ProfilePage user={user} />} />
+        )}
         <Route path="/register" element={<AuthDemo />} />
         <Route path="/login" element={<AuthDemo />} />
       </Routes>
@@ -1643,6 +1678,345 @@ export async function downloadFileFromApi(
   } catch (e) {
     alert('Download error');
   }
+}
+
+// เพิ่ม AboutPage component สำหรับ /about
+function AboutPage() {
+  return (
+    <div className="centered-page" style={{ textAlign: 'center', marginTop: 40 }}>
+      <h1 style={{ color: '#ffd600', fontSize: 36, fontWeight: 'bold', marginBottom: 18 }}>About Zero Marketplace</h1>
+      <p style={{ color: '#fff', fontSize: 18, marginBottom: 18 }}>
+        Zero Marketplace is a community-driven platform for Minecraft content.<br />
+        Created by Lisa and the Bluecoin Community.<br />
+        <br />
+        <b>Contact & Links:</b>
+        <ul style={{ color: '#ffd600', fontSize: 16, margin: '10px auto', maxWidth: 400, textAlign: 'left', lineHeight: 1.7 }}>
+          <li>Discord: <a href="https://discord.gg/your-discord-link" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd600', textDecoration: 'underline' }}>Join our Discord</a></li>
+          <li>GitHub: <a href="https://github.com/your-github-link" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd600', textDecoration: 'underline' }}>Project Source</a></li>
+        </ul>
+        <br />
+        <span style={{ color: '#ffd600' }}>Special thanks to all contributors and the Minecraft community!</span>
+      </p>
+    </div>
+  );
+}
+
+function AboutMePage({ handleDownload, downloads }: { handleDownload: (itemId: string, title: string) => void, downloads: any[] }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [searchTag, setSearchTag] = useState('');
+  const [imageMap, setImageMap] = useState<{ [id: string]: any }>({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 12;
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    if (!searchTag.trim()) return;
+    setLoading(true);
+    fetch(`http://localhost:8000/api/addons-by-tags?tags=${encodeURIComponent(searchTag)}&page=${page}&page_size=${pageSize}`, {
+      headers: {
+        'Authorization': 'Bearer zerotwo'
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
+      .then(data => {
+        setItems(data.items || data); // support both array and {items, total}
+        setTotal(data.total || (Array.isArray(data) ? data.length : 0));
+        setTotalPages(data.total ? Math.ceil(data.total / pageSize) : 1);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('ไม่สามารถโหลดข้อมูลได้');
+        setLoading(false);
+      });
+  }, [searchTag, page]);
+
+  // Enrich images for all items after fetching
+  useEffect(() => {
+    if (items.length === 0) return;
+    const ids = items.map(item => item.id).filter(Boolean);
+    if (ids.length === 0) return;
+    fetch('http://localhost:8000/api/enrich-images', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer zerotwo'
+      },
+      body: JSON.stringify({ item_ids: ids })
+    })
+      .then(res => res.json())
+      .then(data => setImageMap(data))
+      .catch(() => setImageMap({}));
+  }, [items]);
+
+  const handleSearch = () => {
+    setPage(1);
+    setSearchTag(tagInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Use the same thumbnail logic as ItemCard, but from imageMap
+  const getThumbnailUrl = (item: any) => {
+    const images = imageMap[item.id]?.Images || [];
+    if (!images || images.length === 0) return '/placeholder.png';
+    const thumb = images.find((img: any) => img.Tag === 'Thumbnail');
+    if (thumb && thumb.Url) return thumb.Url;
+    return images[0]?.Url || '/placeholder.png';
+  };
+
+  return (
+    <div className="centered-page" style={{
+      maxWidth: 1000,
+      margin: '0 auto',
+      padding: 32,
+      background: 'rgba(0,0,0,0.85)',
+      borderRadius: 24,
+      zIndex: 2,
+      position: 'relative',
+      boxShadow: '0 8px 32px #000a',
+      minHeight: '80vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    }}>
+      <h2 style={{ color: '#ffd600', fontWeight: 900, fontSize: 40, marginBottom: 32, letterSpacing: 1, fontFamily: 'M PLUS Rounded 1c, Noto Sans JP, Arial, sans-serif', textAlign: 'center' }}>
+        เกี่ยวกับฉัน: <span style={{ color: '#fff', fontWeight: 700 }}>Addons</span> <span style={{ color: '#ffd600', fontWeight: 700 }}>(ค้นหาด้วย <span style={{ color: '#ffd600', fontWeight: 900 }}>tag</span>)</span>
+      </h2>
+      <div style={{ marginBottom: 32, display: 'flex', gap: 16, alignItems: 'center', width: '100%', justifyContent: 'center' }}>
+        <input
+          type="text"
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="เช่น tag.horror"
+          style={{
+            padding: '14px 20px',
+            fontSize: 20,
+            borderRadius: 10,
+            border: '2px solid #ffd600',
+            minWidth: 320,
+            background: '#fff',
+            color: '#222',
+            fontWeight: 500,
+            outline: 'none',
+            boxShadow: '0 2px 8px #ffd60033',
+            fontFamily: 'inherit',
+          }}
+        />
+        <button onClick={handleSearch} style={{
+          background: '#ffd600',
+          color: '#222',
+          fontWeight: 700,
+          fontSize: 20,
+          borderRadius: 10,
+          padding: '12px 36px',
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px #ffd60033',
+          transition: 'background 0.2s',
+        }}>
+          ค้นหา
+        </button>
+      </div>
+      {/* Pagination controls */}
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center' }}>
+        <button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+          style={{ background: '#ffd600', color: '#222', border: 'none', borderRadius: 8, padding: '6px 18px', fontWeight: 'bold', fontSize: 16, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.6 : 1 }}
+        >Prev</button>
+        <span style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 18 }}>Page {page} / {totalPages}</span>
+        <button
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          style={{ background: '#ffd600', color: '#222', border: 'none', borderRadius: 8, padding: '6px 18px', fontWeight: 'bold', fontSize: 16, cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.6 : 1 }}
+        >Next</button>
+      </div>
+      {loading && <div style={{ color: '#ffd600', fontSize: 22, margin: 24 }}>กำลังโหลด...</div>}
+      {error && <div style={{ color: 'red', fontSize: 18 }}>{error}</div>}
+      <div className="results-list" style={{ width: '100%', marginTop: 8 }}>
+        {items.map((item, idx) => {
+          const mappedItem = {
+            Id: item.id,
+            Title: { 'en-US': item.title },
+            DisplayProperties: { creatorName: item.creator },
+            Tags: item.tags,
+            canDownload: true, // หรือจะใส่ logic เฉพาะก็ได้
+            Images: imageMap[item.id]?.Images || []
+          };
+          return (
+            <ItemCard
+              key={item.id || idx}
+              item={mappedItem}
+              index={idx}
+              onDownload={handleDownload}
+              downloads={downloads}
+              disableDownload={false}
+            />
+          );
+        })}
+      </div>
+      {items.length === 0 && !loading && !error && <div style={{ color: '#ffd600', fontSize: 20, marginTop: 32 }}>ไม่พบ Addon ที่มี {searchTag}</div>}
+    </div>
+  );
+}
+
+// เพิ่ม ProfilePage component
+function ProfilePage({ user }: { user: any }) {
+  const role = user.role || 'user';
+  const [showSettings, setShowSettings] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadKeys = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploadStatus(null);
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      setUploadStatus('กรุณาเลือกไฟล์ก่อน');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://localhost:8000/api/upload-keys', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setUploadStatus('อัปโหลดไฟล์คีย์สำเร็จ!');
+    } catch (err: any) {
+      setUploadStatus('เกิดข้อผิดพลาด: ' + (err.message || 'ไม่สามารถอัปโหลดได้'));
+    }
+  };
+
+  return (
+    <div
+      className="centered-page"
+      style={{
+        textAlign: 'center',
+        marginTop: 40,
+        position: 'relative',
+        zIndex: 10, // ให้ลอยเหนือวิดีโอ
+        background: 'rgba(0,0,0,0.85)', // พื้นหลังโปร่งแสง
+        borderRadius: 24,
+        maxWidth: 400,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        padding: 32,
+        boxShadow: '0 8px 32px #000a',
+      }}
+    >
+      <h1 style={{ color: '#ffd600', fontSize: 36, fontWeight: 'bold', marginBottom: 18 }}>โปรไฟล์</h1>
+      <div style={{ color: '#fff', fontSize: 20, marginBottom: 12 }}>
+        <b>ชื่อผู้ใช้:</b> {user.username}
+      </div>
+      <div style={{ color: '#ffd600', fontSize: 20, marginBottom: 12 }}>
+        <b>บทบาท:</b> {role}
+      </div>
+      {user.role === 'admin' && (
+        <div style={{ marginTop: 24 }}>
+          <button
+            style={{
+              background: '#ffd600',
+              color: '#222',
+              fontWeight: 'bold',
+              fontSize: 18,
+              border: 'none',
+              borderRadius: 8,
+              padding: '12px 48px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px #0004',
+              marginBottom: 12,
+            }}
+            onClick={() => setShowSettings(true)}
+          >
+            ตั้งค่า (Admin Settings)
+          </button>
+          {showSettings && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.7)',
+              zIndex: 2000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+              onClick={() => setShowSettings(false)}
+            >
+              <div
+                style={{
+                  background: '#181818',
+                  borderRadius: 16,
+                  padding: 32,
+                  minWidth: 320,
+                  maxWidth: 400,
+                  color: '#ffd600',
+                  boxShadow: '0 4px 32px #000a',
+                  position: 'relative',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setShowSettings(false)}
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 16,
+                    background: 'none',
+                    border: 'none',
+                    color: '#ffd600',
+                    fontSize: 28,
+                    cursor: 'pointer',
+                  }}
+                >×</button>
+                <h2 style={{ color: '#ffd600', marginBottom: 12 }}>ตั้งค่าระบบ (Admin)</h2>
+                <form onSubmit={handleUploadKeys}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ color: '#fff', fontSize: 16 }}>อัปโหลดไฟล์คีย์ (.txt หรือ .db):</label><br />
+                    <input type="file" ref={fileInputRef} accept=".txt,.db" style={{ marginTop: 8 }} />
+                  </div>
+                  <button type="submit" style={{
+                    background: '#ffd600',
+                    color: '#222',
+                    fontWeight: 'bold',
+                    fontSize: 16,
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '10px 32px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px #0004',
+                  }}>อัปโหลดไฟล์คีย์</button>
+                </form>
+                {uploadStatus && <div style={{ color: uploadStatus.startsWith('เกิด') ? 'red' : '#4caf50', marginTop: 16 }}>{uploadStatus}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <div style={{ color: '#aaa', fontSize: 16, marginTop: 24 }}>
+        ข้อมูลนี้แสดงเฉพาะผู้ที่ล็อกอินเท่านั้น
+      </div>
+    </div>
+  );
 }
 
 
