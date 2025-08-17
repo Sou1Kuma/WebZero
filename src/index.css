@@ -9,8 +9,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a1a1a;
-  color: white;
+  /* Dark glassmorphism-friendly background */
+  background:
+    radial-gradient(1000px 600px at 10% -10%, rgba(255, 214, 0, 0.06), transparent 60%),
+    radial-gradient(800px 500px at 110% 10%, rgba(168, 95, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, #0e0f12 0%, #121318 30%, #0b0c0f 100%);
+  color: #e7e7e7;
 }
 
 code {

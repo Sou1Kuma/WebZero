@@ -2,39 +2,41 @@
 
 body, .App {
   font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', Arial, sans-serif;
-  background: linear-gradient(135deg, #f8e1f4 0%, #e0f0ff 100%);
+  background: transparent; /* Use global dark bg from index.css */
   min-height: 100vh;
-  color: #6b3fa0;
+  color: #e7e7e7;
 }
 
 .App-header {
-  background: linear-gradient(90deg, #ffe3fa 0%, #b6eaff 100%);
-  box-shadow: 0 4px 24px 0 rgba(180,120,255,0.10);
-  border-bottom: 3px solid #b6eaff;
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
   padding: 40px 20px 24px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 180px;
-  border-radius: 0 0 32px 32px;
+  border-radius: 0 0 24px 24px;
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .title {
   margin-bottom: 32px;
   font-size: 2.2rem;
-  color: #a85fff;
+  color: #eaeaea;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-shadow: 0 2px 12px #ffe3fa, 0 0 2px #b6eaff;
+  letter-spacing: 1.2px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45), 0 0 8px rgba(168,95,255,0.25);
   font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', Arial, sans-serif;
 }
 
 nav {
-  background: transparent !important;
-  box-shadow: none;
+  background: rgba(255,255,255,0.06) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   border-radius: 16px;
   padding: 12px 32px;
   margin: 0 auto 24px auto;
@@ -43,19 +45,23 @@ nav {
   justify-content: center;
   align-items: center;
   max-width: 700px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 nav a {
-  color: #a85fff;
+  color: #ffd600;
   font-weight: bold;
   text-decoration: none;
-  font-size: 1.1em;
-  padding: 8px 20px;
-  border-radius: 8px;
-  transition: background 0.2s, color 0.2s;
+  font-size: 1.05em;
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 nav a:hover, nav a.active {
-  background: linear-gradient(90deg, #ffe3fa 0%, #b6eaff 100%);
-  color: #ff7eb9;
+  background: rgba(255,255,255,0.10);
+  color: #ffe88a;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
 
 .search-container {
@@ -65,50 +71,53 @@ nav a:hover, nav a.active {
   max-width: 500px;
   width: 100%;
   margin: 0 auto 24px auto;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
-  box-shadow: 0 2px 8px #ffe3fa;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   padding: 12px 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .search-input {
   flex: 1;
   padding: 12px 16px;
   font-size: 16px;
-  border: 2px solid #b6eaff;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #a85fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  background-color: rgba(255,255,255,0.04);
+  color: #e7e7e7;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', Arial, sans-serif;
 }
 .search-input:focus {
-  border-color: #ffb6e6;
-  box-shadow: 0 0 15px #ffe3fa;
-  transform: translateY(-2px);
+  border-color: rgba(255,214,0,0.65);
+  box-shadow: 0 0 0 4px rgba(255,214,0,0.12);
+  transform: translateY(-1px);
 }
 .search-input::placeholder {
-  color: #b6eaff;
+  color: #9aa0a6;
 }
 
 .search-button {
-  padding: 12px 24px;
+  padding: 12px 20px;
   font-size: 16px;
-  background: linear-gradient(90deg, #ffb6e6 0%, #b6eaff 100%);
-  color: #a85fff;
-  border: none;
-  border-radius: 8px;
+  background: rgba(255,214,0,0.15);
+  color: #ffd600;
+  border: 1px solid rgba(255,214,0,0.55);
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px #ffe3fa;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
   font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', Arial, sans-serif;
 }
 .search-button:hover {
-  background: linear-gradient(90deg, #b6eaff 0%, #ffb6e6 100%);
-  color: #ff7eb9;
-  box-shadow: 0 4px 16px #ffb6e6;
+  background: rgba(255,214,0,0.25);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  transform: translateY(-1px);
 }
 
 .app-footer {
@@ -116,13 +125,15 @@ nav a:hover, nav a.active {
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(90deg, #ffe3fa 0%, #b6eaff 100%);
-  border-top: 2px solid #b6eaff;
+  background: rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255,255,255,0.12);
   padding: 18px 20px;
   z-index: 1000;
-  box-shadow: 0 -2px 16px #ffe3fa;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
   border-radius: 24px 24px 0 0;
   animation: footerSlideUp 2s ease-out 1.8s both;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .footer-content {
   max-width: 1200px;
@@ -133,7 +144,7 @@ nav a:hover, nav a.active {
   margin: 0;
   font-size: 1.1em;
   font-weight: 500;
-  color: #a85fff;
+  color: #e7e7e7;
   font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', Arial, sans-serif;
   letter-spacing: 0.5px;
 }
@@ -215,21 +226,21 @@ nav a:hover, nav a.active {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255,255,255,0.06);
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.12);
   text-align: left;
   animation: resultItemSlideIn 0.6s ease-out both;
   transition: all 0.3s ease;
   height: fit-content;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .result-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(255, 215, 0, 0.1);
-  border-color: #ffd700;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  border-color: rgba(255,214,0,0.55);
 }
 
 .result-item:nth-child(1) { animation-delay: 0.1s; }
@@ -290,7 +301,7 @@ nav a:hover, nav a.active {
 }
 
 .result-title {
-  color: white;
+  color: #ffffff;
   font-weight: bold;
   font-size: 18px;
   margin-bottom: 8px;
@@ -521,12 +532,14 @@ nav a:hover, nav a.active {
   right: -400px;
   width: 400px;
   height: 100vh;
-  background: #2a2a2a;
-  border-left: 2px solid #333;
+  background: rgba(20,20,24,0.6);
+  border-left: 1px solid rgba(255,255,255,0.12);
   transition: right 0.3s ease;
   z-index: 999;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .downloads-panel.open {
@@ -574,13 +587,16 @@ nav a:hover, nav a.active {
 }
 
 .download-item {
-  background: #333;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
   padding: 15px;
   margin-bottom: 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .download-item.pending {
@@ -705,13 +721,16 @@ nav a:hover, nav a.active {
 }
 
 .notification {
-  background: #333;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
   padding: 15px 20px;
   min-width: 300px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
   animation: slideInDown 0.3s ease, slideOutUp 0.3s ease 4.7s forwards;
   border-left: 4px solid #ffd700;
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .notification-info {
@@ -928,13 +947,14 @@ nav a:hover, nav a.active {
 .browse-page {
   max-width: 700px;
   margin: 40px auto;
-  background: rgba(0,0,0,0.7);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
   padding: 32px 24px 24px 24px;
   color: #fff;
-  box-shadow: 0 2px 16px #0006;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .browse-page h2 {
   color: #ffd600;
@@ -947,13 +967,14 @@ nav a:hover, nav a.active {
   gap: 18px;
 }
 .browse-item {
-  background: rgba(255,255,255,0.1);
-  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
   padding: 16px 18px;
   color: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .browse-pagination {
   background: rgba(0,0,0,0.7);
@@ -992,15 +1013,17 @@ nav a:hover, nav a.active {
 }
 
 .gallery-thumbnails {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
   position: relative;
   display: flex;
   gap: 8px;
   overflow: hidden;
   padding: 8px;
   align-items: center;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .gallery-thumbnails img {
   box-sizing: border-box;
@@ -1074,14 +1097,15 @@ nav a:hover, nav a.active {
     left: -320px;
     width: 260px;
     height: 100vh;
-    background: rgba(255,255,255,0.1);
-    box-shadow: 2px 0 16px rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 2px 0 24px rgba(0,0,0,0.35);
     z-index: 1300;
     transition: left 0.3s cubic-bezier(.4,0,.2,1);
     border-radius: 0 12px 12px 0;
     overflow-y: auto;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   .filter-drawer.open {
     left: 0;
@@ -1175,12 +1199,13 @@ nav a:hover, nav a.active {
 /* ห้ามใช้กับ .downloads-panel, .notification, modal/detail */
 
 .result-item, .browse-item, .results-container {
-  background: rgba(0,0,0,0.7) !important;
+  background: rgba(255,255,255,0.06) !important;
   color: #fff !important;
-  box-shadow: 0 2px 8px #0006;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
   border-radius: 12px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .result-title, .result-creator, .result-id {
@@ -1201,20 +1226,22 @@ nav a:hover, nav a.active {
   border: none;
 }
 
-.filter-sidebar button, .browse-btn, .search-button {
-  background: linear-gradient(90deg, #ffe3fa 0%, #b6eaff 100%);
-  color: #a85fff;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px #ffe3fa;
-  opacity: 0.92;
-  transition: background 0.2s, color 0.2s, opacity 0.2s;
+.filter-sidebar button, .browse-btn {
+  background: rgba(255,255,255,0.06);
+  color: #e7e7e7;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  opacity: 0.95;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
-.filter-sidebar button:hover, .browse-btn:hover, .search-button:hover {
+.filter-sidebar button:hover, .browse-btn:hover {
   opacity: 1;
-  background: linear-gradient(90deg, #b6eaff 0%, #ffb6e6 100%);
-  color: #ff7eb9;
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,214,0,0.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  transform: translateY(-1px);
 }
 
 /* Responsive: คงไว้เหมือนเดิม */
