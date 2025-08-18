@@ -162,21 +162,21 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
               },
               body: JSON.stringify({ item_ids: itemIds })
             })
-            .then(res => res.json())
-            .then(imageData => {
-              const enrichedItems = items.map((item: any) => {
-                const itemId = item.Id || item.id;
-                if (imageData[itemId] && imageData[itemId].Images) {
-                  return { ...item, Images: imageData[itemId].Images };
-                }
-                return item;
+              .then(res => res.json())
+              .then(imageData => {
+                const enrichedItems = items.map((item: any) => {
+                  const itemId = item.Id || item.id;
+                  if (imageData[itemId] && imageData[itemId].Images) {
+                    return { ...item, Images: imageData[itemId].Images };
+                  }
+                  return item;
+                });
+                console.log('Enriched items:', enrichedItems.length, enrichedItems);
+                setItems(enrichedItems);
+              })
+              .catch(err => {
+                setItems(items);
               });
-              console.log('Enriched items:', enrichedItems.length, enrichedItems);
-              setItems(enrichedItems);
-            })
-            .catch(err => {
-              setItems(items);
-            });
           } else {
             setItems(items);
           }
@@ -217,14 +217,14 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       .then(imageData => {
         const images = imageData[selectedItem.Id || selectedItem.id]?.Images || [];
         const galleryImages = images.filter((img: any) => img.Tag === 'Thumbnail' || img.Tag === 'screenshot');
-        
+
         // Sort images: Thumbnail first, then screenshots
         const sortedImages = galleryImages.sort((a: any, b: any) => {
           if (a.Tag === 'Thumbnail' && b.Tag !== 'Thumbnail') return -1;
           if (a.Tag !== 'Thumbnail' && b.Tag === 'Thumbnail') return 1;
           return 0;
         });
-        
+
         setModalImages(sortedImages);
         setModalVideos(images.filter((img: any) => img.Tag.toLowerCase().includes('video') || img.Tag.toLowerCase().includes('trailer')));
         setSelectedImage(sortedImages[0]?.Url || null);
@@ -265,7 +265,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ position: 'relative', width: 400 }}>
           <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
-            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
           </span>
           <input
             type="text"
@@ -525,17 +525,17 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
                     Your browser does not support the video tag.
                   </video>
                 ))}
-                      </div>
-                    )}
+              </div>
+            )}
             <div style={{ fontWeight: 'bold', fontSize: 22, color: '#ffd600', textAlign: 'center', marginBottom: 8 }}>
               {selectedItem.Title?.['en-US'] || selectedItem.name || selectedItem.title}
-                    </div>
+            </div>
             <div style={{ color: '#ccc', fontSize: 16, marginBottom: 4, textAlign: 'center' }}>
               by {selectedItem.DisplayProperties?.creatorName || 'Unknown'}
-                    </div>
+            </div>
             <div style={{ color: '#aaa', fontSize: 13, marginBottom: 8, textAlign: 'center' }}>
               ID: {selectedItem.Id || selectedItem.id}
-                    </div>
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
               {(() => {
                 const tags = selectedItem.Tags || [];
@@ -620,43 +620,43 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Download button */}
                   {(selectedItem.canDownload || (selectedItem.Tags && selectedItem.Tags.map((t: string) => t.toLowerCase()).includes('skinpack'))) && (
-                  <button
-                    onClick={() => {
-                      handleDownload(selectedItem.Id || selectedItem.id, selectedItem.Title?.['en-US'] || selectedItem.name || selectedItem.title || 'Unknown Title');
-                    }}
-                    disabled={isPending || isDownloading}
-                    style={{
-                      background: '#ffd600',
-                      color: '#222',
-                      fontWeight: 'bold',
-                      fontSize: 18,
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '12px 48px',
-                      margin: '0 auto',
-                      display: 'block',
-                      cursor: isPending || isDownloading ? 'not-allowed' : 'pointer',
-                      opacity: isPending || isDownloading ? 0.7 : 1,
-                      boxShadow: '0 2px 8px #0004',
-                      transition: 'all 0.2s ease',
-                      width: '100%',
-                      maxWidth: 300
-                    }}
-                  >
-                    {isPending ? 'Preparing...' :
-                     isDownloading ? 'Downloading...' :
-                     'Download'}
-                  </button>
+                    <button
+                      onClick={() => {
+                        handleDownload(selectedItem.Id || selectedItem.id, selectedItem.Title?.['en-US'] || selectedItem.name || selectedItem.title || 'Unknown Title');
+                      }}
+                      disabled={isPending || isDownloading}
+                      style={{
+                        background: '#ffd600',
+                        color: '#222',
+                        fontWeight: 'bold',
+                        fontSize: 18,
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '12px 48px',
+                        margin: '0 auto',
+                        display: 'block',
+                        cursor: isPending || isDownloading ? 'not-allowed' : 'pointer',
+                        opacity: isPending || isDownloading ? 0.7 : 1,
+                        boxShadow: '0 2px 8px #0004',
+                        transition: 'all 0.2s ease',
+                        width: '100%',
+                        maxWidth: 300
+                      }}
+                    >
+                      {isPending ? 'Preparing...' :
+                        isDownloading ? 'Downloading...' :
+                          'Download'}
+                    </button>
                   )}
                 </div>
               );
             })()}
-                    </div>
-                  </div>
-      , document.body)}
+          </div>
+        </div>
+        , document.body)}
     </div>
   );
 }
@@ -795,7 +795,7 @@ function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: st
         <div className="search-card" style={{ background: 'rgba(255,255,255,0.65)', boxShadow: '0 4px 24px #ffe3fa', borderRadius: 18, padding: 32, marginBottom: 18, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="search-container" style={{ display: 'flex', gap: 0, alignItems: 'center', width: '100%', maxWidth: 420, background: 'white', borderRadius: 12, boxShadow: '0 2px 8px #ffe3fa', padding: '0 0 0 12px', position: 'relative' }}>
             <span style={{ position: 'absolute', left: 18, color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
-              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             </span>
             <input
               type="text"
@@ -972,7 +972,7 @@ function App() {
   const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showCredits, setShowCredits] = useState(false);
-  
+
   // Authentication states
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
@@ -1166,7 +1166,7 @@ Minecraft Marketplace Content Platform
           } else if (errorData.detail) {
             errorMessage = errorData.detail;
           }
-        } catch (parseError) {}
+        } catch (parseError) { }
         throw new Error(errorMessage);
       }
       const contentLength = response.headers.get('content-length');
@@ -1208,7 +1208,7 @@ Minecraft Marketplace Content Platform
       //   filename = filename.replace(/\.zip$/, ext);
       // }
       // --- Always use the filename from backend ---
-  
+
       const reader = response.body?.getReader();
       const chunks: Uint8Array[] = [];
       let downloadedSize = 0;
@@ -1312,15 +1312,15 @@ Minecraft Marketplace Content Platform
       transition: 'right 0.3s',
       overflow: 'hidden',
     }}>
-      <div className="downloads-header" style={isMobile ? {padding: '16px 24px 8px', borderBottom: '1px solid #333', fontSize: 20, fontWeight: 'bold'} : {}}>
-        <h3 style={{margin: 0}}>Downloads</h3>
+      <div className="downloads-header" style={isMobile ? { padding: '16px 24px 8px', borderBottom: '1px solid #333', fontSize: 20, fontWeight: 'bold' } : {}}>
+        <h3 style={{ margin: 0 }}>Downloads</h3>
         <button
           className="close-panel-btn"
           onClick={() => setIsDownloadPanelOpen(false)}
-          style={isMobile ? {position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer'} : {}}
+          style={isMobile ? { position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer' } : {}}
         >✕</button>
       </div>
-      <div className="downloads-content" style={isMobile ? {flex: 1, overflowY: 'auto', padding: 16} : {}}>
+      <div className="downloads-content" style={isMobile ? { flex: 1, overflowY: 'auto', padding: 16 } : {}}>
         {downloads.length === 0 ? (
           <div className="no-downloads">No active downloads</div>
         ) : (
@@ -1345,8 +1345,8 @@ Minecraft Marketplace Content Platform
                   </div>
                   <div className="progress-text">
                     {download.status === 'pending' ? 'Pending...' :
-                     download.totalSize > 0 ? `${download.progress.toFixed(1)}%` :
-                     download.downloadedSize > 0 ? 'Downloading...' : '0%'}
+                      download.totalSize > 0 ? `${download.progress.toFixed(1)}%` :
+                        download.downloadedSize > 0 ? 'Downloading...' : '0%'}
                   </div>
                 </div>
                 <div className="download-stats">
