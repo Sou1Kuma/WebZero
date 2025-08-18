@@ -259,12 +259,12 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
   }, [selectedItem]);
 
   return (
-    <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-      <h2 style={{ color: '#ffd600', fontWeight: 'bold', fontSize: 32, textAlign: 'center', marginBottom: 24 }}>Browse Marketplace</h2>
+    <div className="browse-page">
+      <h2 className="browse-title">Browse Marketplace</h2>
       {/* ช่องค้นหาใหม่ (เด่นขึ้น อยู่บนสุด) */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ position: 'relative', width: 400 }}>
-          <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
+      <div className="browse-search">
+        <div className="browse-search-input-wrap">
+          <span className="browse-search-icon">
             <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
           </span>
           <input
@@ -272,26 +272,19 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search content in marketplace..."
-            style={{
-              width: '100%',
-              padding: '14px 16px 14px 48px',
-              fontSize: 20,
-              borderRadius: 12,
-              border: '2px solid #ffd600',
-              boxShadow: '0 2px 12px #ffd60033',
-              outline: 'none',
-              color: '#a85fff',
-              background: '#181818',
-              marginBottom: 0
-            }}
+            className="browse-search-input"
             onKeyDown={e => { if (e.key === 'Enter') setDebouncedSearch(search); }}
           />
         </div>
       </div>
       {/* เดิม: filter/sort bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <label style={{ color: '#ffd600', fontWeight: 'bold', marginRight: 8 }}>Sort by:</label>
-        <select value={sort} onChange={e => setSort(e.target.value as 'created' | 'updated')} style={{ fontSize: 16, borderRadius: 6, padding: '4px 12px' }}>
+      <div className="browse-sort">
+        <label className="browse-sort-label">Sort by:</label>
+        <select
+          value={sort}
+          onChange={e => setSort(e.target.value as 'created' | 'updated')}
+          className="browse-sort-select"
+        >
           <option value="created">Latest Created</option>
           <option value="updated">Latest Updated</option>
         </select>
@@ -300,66 +293,44 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
       <button
         className="filter-drawer-btn"
         onClick={() => setDrawerOpen(true)}
-        style={{
-          display: 'none',
-          position: 'fixed',
-          top: 24,
-          left: 24,
-          zIndex: 1200,
-          background: '#ffd600',
-          color: '#222',
-          border: 'none',
-          borderRadius: 8,
-          padding: '10px 24px',
-          fontWeight: 'bold',
-          fontSize: 18,
-          boxShadow: '0 2px 8px #0004',
-          cursor: 'pointer',
-        }}
       >Filter</button>
       {/* Drawer overlay */}
-      {drawerOpen && (
-        <div className="filter-drawer-overlay" onClick={() => setDrawerOpen(false)}></div>
-      )}
-      {/* Drawer itself */}
       <div className={`filter-drawer${drawerOpen ? ' open' : ''}`}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 24 }}>
+        <div className="filter-drawer-content">
           <button
+            className="filter-close-btn"
             onClick={() => setDrawerOpen(false)}
-            style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#ffd600', fontSize: 28, cursor: 'pointer', marginBottom: 8 }}
           >×</button>
-          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
+          <div className="filter-title">Filter by Tag</div>
           {tags.map((tag) => (
             <button
               key={tag.value}
               className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
               onClick={() => { setSelectedTag(tag.value); setPage(1); setDrawerOpen(false); }}
-              style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
             >
               {tag.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="browse-content" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+      <div className="browse-content">
         {/* Desktop filter (hidden on mobile) */}
         <div className="filter-sidebar">
-          <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#ffd600' }}>Filter by Tag</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="filter-title">Filter by Tag</div>
+          <div className="filter-buttons">
             {tags.map((tag) => (
               <button
                 key={tag.value}
                 className={selectedTag === tag.value ? 'browse-btn selected' : 'browse-btn'}
                 onClick={() => { setSelectedTag(tag.value); setPage(1); }}
-                style={{ fontWeight: selectedTag === tag.value ? 'bold' : undefined }}
               >
                 {tag.label}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', marginBottom: 18, gap: 12 }}>
+        <div className="browse-main">
+          <div className="browse-toolbar">
             {/* ช่องค้นหาเดิม ลบออก เพราะย้ายไปด้านบนแล้ว */}
             {/* <input
               type="text"
@@ -377,12 +348,7 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
                 <div style={{ textAlign: 'center', color: '#ffd600', fontSize: 20, marginTop: 40 }}>No items found.</div>
               ) : (
                 <>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: 24,
-                    marginTop: 8
-                  }}>
+                  <div className="browse-grid">
                     {items.map((item, idx) => {
                       const downloadItem = downloads.find(d => d.id.startsWith((item.Id || item.id) + '_'));
                       const isPending = downloadItem?.status === 'pending';
@@ -398,10 +364,10 @@ function BrowsePage({ handleDownload, downloads, renderDownloadsPanel }: {
                     })}
                   </div>
                   {/* pagination */}
-                  <div className="browse-pagination" style={{ marginTop: 24, textAlign: 'center' }}>
+                  <div className="browse-pagination">
                     <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
                     <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
-                    <span style={{ marginLeft: 12, color: '#ffd600', fontWeight: 'bold' }}>Page {page} / {totalPages}</span>
+                    <span className="browse-page-count">Page {page} / {totalPages}</span>
                   </div>
                 </>
               )}
