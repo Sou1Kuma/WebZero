@@ -24,6 +24,37 @@ body, .App {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Search page title */
+.search-title {
+  color: #eaeaea;
+  font-weight: 700;
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45), 0 0 8px rgba(168,95,255,0.25);
+}
+
+/* Search icon inside input */
+.search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #cfd3d8;
+  font-size: 20px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Tip text under search */
+.search-tip {
+  color: #cfd3d8;
+  font-size: 15px;
+  margin-top: 10px;
+  text-align: center;
+}
+
 .title {
   margin-bottom: 32px;
   font-size: 2.2rem;
@@ -87,11 +118,12 @@ nav button {
   padding: 12px 16px;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  position: relative;
 }
 
 .search-input {
   flex: 1;
-  padding: 12px 16px;
+  padding: 12px 16px 12px 44px;
   font-size: 16px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.12);
@@ -1358,9 +1390,10 @@ nav a:hover, nav a.active {
     margin-left: 0 !important;
     height: 44px !important;
   }
-  .search-card span[style*='position: absolute'] {
+  .search-card .search-icon {
     left: 12px !important;
     top: 14px !important;
+    transform: none !important;
     font-size: 18px !important;
   }
   h2 {

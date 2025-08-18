@@ -789,12 +789,12 @@ function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: st
   };
 
   return (
-    <div className="search-modern-bg" style={{ minHeight: '100vh', padding: '40px 0', background: 'transparent' }}>
-      <div className="centered-page" style={{ maxWidth: 800, width: '100%', margin: '0 auto' }}>
-        <h2 style={{ color: '#a85fff', fontWeight: 'bold', fontSize: 40, textAlign: 'center', marginBottom: 18, letterSpacing: 1 }}>Search Marketplace</h2>
-        <div className="search-card" style={{ background: 'rgba(255,255,255,0.65)', boxShadow: '0 4px 24px #ffe3fa', borderRadius: 18, padding: 32, marginBottom: 18, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div className="search-container" style={{ display: 'flex', gap: 0, alignItems: 'center', width: '100%', maxWidth: 420, background: 'white', borderRadius: 12, boxShadow: '0 2px 8px #ffe3fa', padding: '0 0 0 12px', position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 18, color: '#b6eaff', fontSize: 22, pointerEvents: 'none', zIndex: 2 }}>
+    <div className="search-modern-bg">
+      <div className="centered-page">
+        <h2 className="search-title">Search Marketplace</h2>
+        <div className="search-card">
+          <div className="search-container">
+            <span className="search-icon">
               <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             </span>
             <input
@@ -805,26 +805,24 @@ function SearchPage({ handleDownload, downloads }: { handleDownload: (itemId: st
               placeholder="Enter NAME, UUID or URL"
               className="search-input"
               disabled={loading}
-              style={{ padding: '12px 16px 12px 44px', fontSize: 18, borderRadius: 12, border: '2px solid #b6eaff', width: 320, background: 'transparent', color: '#a85fff', outline: 'none', boxShadow: 'none' }}
             />
             <button
               onClick={handleSearch}
               className="search-button"
               disabled={loading || !searchQuery.trim()}
-              style={{ background: 'linear-gradient(90deg, #ffb6e6 0%, #b6eaff 100%)', color: '#a85fff', fontWeight: 'bold', fontSize: 18, border: 'none', borderRadius: '0 12px 12px 0', padding: '12px 32px', cursor: loading ? 'not-allowed' : 'pointer', marginLeft: -2, height: 48 }}
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
           </div>
-          <div style={{ color: '#b6eaff', fontSize: 15, marginTop: 10, textAlign: 'center' }}>
-            Tip: You can search by <span style={{ color: '#a85fff', fontWeight: 600 }}>name</span>, <span style={{ color: '#a85fff', fontWeight: 600 }}>UUID</span>, or <span style={{ color: '#a85fff', fontWeight: 600 }}>Marketplace URL</span>.
+          <div className="search-tip">
+            Tip: You can search by <span className="highlight">name</span>, <span className="highlight">UUID</span>, or <span className="highlight">Marketplace URL</span>.
           </div>
         </div>
-        {error && <div className="error-message" style={{ color: 'white', background: '#ff4444', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
-        {noResultsError && <div className="no-results-error" style={{ color: 'white', background: '#ff9800', textAlign: 'center', marginBottom: 12 }}>{noResultsError}</div>}
+        {error && <div className="error-message">{error}</div>}
+        {noResultsError && <div className="no-results-error">{noResultsError}</div>}
         {results.length > 0 && (
-          <div className="results-container search-results-fadein" style={{ boxShadow: '0 4px 32px #ffe3fa', borderRadius: 18, background: 'rgba(255,255,255,0.65)', padding: '32px 18px', marginTop: 32 }}>
-            <h3 style={{ color: '#a85fff', textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 24, letterSpacing: 1 }}>Search Results ({results.length})</h3>
+          <div className="results-container search-results-fadein">
+            <h3>Search Results ({results.length})</h3>
             <div className="results-list">
               {results.map((result, index) => (
                 <ItemCard key={result.Id} item={result} index={index} onDownload={handleDownload} downloads={downloads} />
