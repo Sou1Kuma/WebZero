@@ -854,15 +854,6 @@ nav button {
     letter-spacing: 0.8px;
   }
 
-  .search-container {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  .search-input, .search-button {
-    width: 100%;
-  }
-
   .results-list {
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 24px;
