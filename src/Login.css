@@ -52,9 +52,38 @@ img {
 /*=============== LOGIN ===============*/
 .login {
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
   display: grid;
   align-items: center;
+  justify-content: center;
+  background: radial-gradient(1200px 500px at 50% 100%, rgba(255,214,0,0.15), rgba(255,214,0,0) 60%),
+              linear-gradient(135deg, #3a2e5e, #4b6cb7 60%, #182848);
+  padding: 2rem 1rem;
+}
+
+/* Center wrapper */
+.login__wrapper {
+  width: 100%;
+  max-width: 980px;
+}
+
+/* Card with side image + form */
+.login__card {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+.login__side {
+  background-size: cover;
+  background-position: center;
+  min-height: 420px;
 }
 .login__img {
   position: absolute;
@@ -65,12 +94,7 @@ img {
 }
 .login__form {
   position: relative;
-  background-color: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  margin-inline: 1.5rem;
-  padding: 2.5rem 1.5rem;
-  border-radius: 1rem;
-  backdrop-filter: blur(8px);
+  padding: 2.5rem 2rem;
 }
 .login__title {
   text-align: center;
@@ -189,15 +213,18 @@ img {
 /*=============== BREAKPOINTS ===============*/
 /* For medium devices */
 @media screen and (min-width: 576px) {
-  .login {
-    justify-content: center;
-  }
-  .login__form {
-    width: 432px;
-    padding: 4rem 3rem 3.5rem;
-    border-radius: 1.5rem;
-  }
+  .login__form { padding: 3rem 3rem 3rem; }
   .login__title {
     font-size: 2rem;
   }
-} 
+}
+
+/* For small screens: stack */
+@media screen and (max-width: 680px) {
+  .login__card {
+    grid-template-columns: 1fr;
+  }
+  .login__side {
+    height: 220px;
+  }
+}
