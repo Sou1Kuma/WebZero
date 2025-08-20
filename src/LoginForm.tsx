@@ -36,7 +36,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister, mode, setMod
 
           {/* ฟอร์ม login */}
           <form className="login__form" onSubmit={handleSubmit}>
-            <h1 className="login__title">{mode === 'login' ? '登录' : '注册'}</h1>
+            <h1 className="login__title">{mode === 'login' ? 'Login' : 'Register'}</h1>
             <div className="login__content">
               <div className="login__box">
                 <i className="ri-user-3-line login__icon"></i>
